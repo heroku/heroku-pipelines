@@ -32,7 +32,7 @@ module.exports = {
     const sourceStage = coupling.stage;
     const targetStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
 
-    if (targetStage == null) {
+    if (targetStage == null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
       throw new Error(`Cannot promote ${app} from '${sourceStage}' stage`);
     }
 
@@ -40,31 +40,36 @@ module.exports = {
       return app.coupling.stage === targetStage;
     });
 
-    const releases = yield cli.action(`Fetching latest release from ${app}`,
-      heroku.apps(app).releases().list({
-        headers: {
-          'Accept': V3_HEADER,
-          'Range':  'version ..; order=desc'
-        }
-      }));
+    if (targetApps.length < 1) {
+      throw new Error(`Cannot promote from ${app} as there are no downstream apps in $(targetStage) stage`);
+    }
 
-    const sourceRelease = releases.sort(function(a, b) {
-      if (a.version < b.version) return 1;
-      if (a.version > b.version) return -1;
-      return 0;
-    }).filter(function(release) {
-      return release.slug != null;
-    })[0];
+    const releases = yield cli.action(`Fetching latest release from ${app}`,
+      heroku.request({
+        method: 'GET',
+        path: `/apps/${app}/releases`,
+        headers: { 'Accept': V3_HEADER, 'Range':  'version ..; order=desc,max=1;' }
+      }));
+    cli.hush(releases);
+
+    const sourceRelease = releases[0];
 
     if (sourceRelease == null) {
-      throw new Error(`Cannot promote from ${app} as it has no existing release`);
+      throw new Error(`Cannot promote from ${app} as it has no builds yet`);
     }
 
     const sourceSlug = sourceRelease.slug.id;
 
     yield targetApps.map(function(targetApp) {
-      const promotion = heroku.apps(targetApp.id).releases().create({
-        slug: sourceSlug
+      const promotion = heroku.request({
+        method: 'POST',
+        path: `/apps/${targetApp.id}/releases`,
+        headers: {
+          'Accept': V3_HEADER,
+          'Heroku-Deploy-Type': 'pipeline-promote',
+          'Heroku-Deploy-Source': app
+        },
+        body: { slug: sourceSlug }
       });
 
       return cli.action(`Promoting to ${targetApp.name}`, promotion);
