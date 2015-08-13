@@ -11,11 +11,11 @@ describe('pipelines:info', function () {
 
   it('displays the pipeline info and apps', function () {
     let self     = this;
-    let pipeline = {name: 'example', id: '0123'};
+    let pipelines = [{name: 'example', id: '0123'}];
     let apps     = [{name: 'example-staging', coupling: {stage: 'staging'}, pipeline: pipeline}, {name: 'example', coupling: {stage: 'production'}, pipeline: pipeline}, {name: 'example-admin', coupling: {stage: 'production'}, pipeline: pipeline}];
 
     nock('https://api.heroku.com')
-    .get('/pipelines/example')
+    .get('pipelines?eq[name]=example')
     .reply(200, pipeline);
 
     nock('https://api.heroku.com')
