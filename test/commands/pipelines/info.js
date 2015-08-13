@@ -16,7 +16,7 @@ describe('pipelines:info', function () {
 
     nock('https://api.heroku.com')
     .get('pipelines?eq[name]=example')
-    .reply(200, pipeline);
+    .reply(200, pipelines);
 
     nock('https://api.heroku.com')
     .get('/pipelines/0123/apps')
