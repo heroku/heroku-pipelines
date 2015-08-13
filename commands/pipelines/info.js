@@ -1,8 +1,7 @@
 'use strict';
 
-let cli       = require('heroku-cli-util');
-let validator = require('validator');
-let inquirer  = require("inquirer");
+let cli          = require('heroku-cli-util');
+let disambiguate = require('../../lib/disambiguate');
 
 module.exports = {
   topic: 'pipelines',
@@ -14,38 +13,7 @@ module.exports = {
     {name: 'pipeline', description: 'pipeline to show', optional: false}
   ],
   run: cli.command(function* (context, heroku) {
-    let pipeline_id_or_name = context.args.pipeline;
-    var pipeline;
-    if(validator.isUUID(pipeline_id_or_name)) {
-      pipeline = yield heroku.request({
-        method: 'GET',
-        path: `/pipelines/${pipeline_id_or_name}`,
-        headers: { 'Accept': 'application/vnd.heroku+json; version=3.pipelines' }
-      }); // heroku.pipelines(pipeline_id_or_name).info();
-    } else {
-      let pipelines = yield heroku.request({
-        method: 'GET',
-        path: `/pipelines?eq[name]=${pipeline_id_or_name}`,
-        headers: { 'Accept': 'application/vnd.heroku+json; version=3.pipelines' }
-      });
-      if(pipelines.length == 0) {
-        throw new Error('Pipeline not found');
-      } else if (pipelines.length == 1) {
-        pipeline = pipelines[0];
-      } else {
-        // Disambiguate
-        let questions = [{
-          type: "list",
-          name: "pipeline",
-          message: `Which pipeline?`,
-          choices: pipelines.map(function(x) {return {name: new Date(x.created_at), value: x}})
-        }];
-        yield inquirer.prompt( questions, function ( answers ) {
-          if (answers.pipeline) pipeline = answers.pipeline;
-          else throw new Error('Must pick a pipeline');
-        });
-      }
-    }
+    let pipeline = yield disambiguate(heroku, context.args.pipeline);
     let apps = yield heroku.request({
       method: 'GET',
       path: `/pipelines/${pipeline.id}/apps`,
