@@ -101,7 +101,7 @@ Renaming example pipeline to www... done
 #### Destroy pipeline
 
 ```bash
-$ heroku pipelines:destroy www # Not working yet
+$ heroku pipelines:destroy www
 Destroying www pipeline... done
 ```
 
