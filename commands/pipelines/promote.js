@@ -41,38 +41,18 @@ module.exports = {
     });
 
     if (targetApps.length < 1) {
-      throw new Error(`Cannot promote from ${app} as there are no downstream apps in $(targetStage) stage`);
+      throw new Error(`Cannot promote from ${app} as there are no downstream apps in ${targetStage} stage`);
     }
 
-    const releases = yield cli.action(`Fetching latest release from ${app}`,
-      heroku.request({
-        method: 'GET',
-        path: `/apps/${app}/releases`,
-        headers: { 'Accept': V3_HEADER, 'Range':  'version ..; order=desc,max=1' },
-        partial: true
-      }));
-
-    const sourceRelease = releases[0];
-
-    if (sourceRelease === null) {
-      throw new Error(`Cannot promote from ${app} as it has no builds yet`);
-    }
-
-    const sourceSlug = sourceRelease.slug.id;
-
-    yield targetApps.map(function(targetApp) {
-      const promotion = heroku.request({
-        method: 'POST',
-        path: `/apps/${targetApp.id}/releases`,
-        headers: {
-          'Accept': V3_HEADER,
-          'Heroku-Deploy-Type': 'pipeline-promote',
-          'Heroku-Deploy-Source': app
-        },
-        body: { slug: sourceSlug }
-      });
-
-      return cli.action(`Promoting to ${targetApp.name}`, promotion);
-    });
+    return cli.action(`Starting promotion to ${targetStage}`, heroku.request({
+      method: 'POST',
+      path: `/pipeline-promotions`,
+      headers: { 'Accept': PIPELINES_HEADER, },
+      body: {
+        pipeline: { id: coupling.pipeline.id },
+        source:   { app: { id: coupling.app.id } },
+        targets:  targetApps.map(function(app) { return { app: { id: app.id } }; })
+      }
+    }));
   })
 };
