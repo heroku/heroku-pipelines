@@ -1,10 +1,40 @@
 'use strict';
 
-let cli = require('heroku-cli-util');
+const cli = require('heroku-cli-util');
 
 const PROMOTION_ORDER = ["development", "staging", "production"];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
 const PIPELINES_HEADER = V3_HEADER + '.pipelines';
+
+function isComplete(promotionTarget) {
+  return promotionTarget.status !== 'pending';
+}
+
+function isSucceeded(promotionTarget) {
+  return promotionTarget.status === 'succeeded';
+}
+
+function isFailed(promotionTarget) {
+  return promotionTarget.status === 'failed';
+}
+
+function pollPromotionStatus(heroku, id) {
+  return new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      heroku.request({
+        method: 'GET',
+        path: `/pipeline-promotions/${id}/promotion-targets`,
+        headers: { 'Accept': PIPELINES_HEADER, }
+      }).then(function(promotionTargets) {
+        if (promotionTargets.every(isComplete)) {
+          return resolve(promotionTargets);
+        }
+
+        return pollPromotionStatus(heroku, id).then(resolve, reject);
+      }, reject);
+    });
+  }, 1000);
+}
 
 module.exports = {
   topic: 'pipelines',
@@ -44,7 +74,7 @@ module.exports = {
       throw new Error(`Cannot promote from ${app} as there are no downstream apps in ${targetStage} stage`);
     }
 
-    return cli.action(`Starting promotion to ${targetStage}`, heroku.request({
+    const promotion = yield cli.action(`Starting promotion to ${targetStage}`, heroku.request({
       method: 'POST',
       path: `/pipeline-promotions`,
       headers: { 'Accept': PIPELINES_HEADER, },
@@ -54,5 +84,20 @@ module.exports = {
         targets:  targetApps.map(function(app) { return { app: { id: app.id } }; })
       }
     }));
+
+    const pollLoop = pollPromotionStatus(heroku, promotion.id);
+    const promotionTargets = yield cli.action('Waiting for promotion to complete', pollLoop);
+
+    if (promotionTargets.every(isSucceeded)) {
+      cli.log('Promotion successful');
+    } else {
+      const failedTargets = promotionTargets.filter(isFailed).reduce(function(memo, target) {
+        const app = allApps.filter(function(app) { return app.id === target.app.id; })[0];
+        memo[app.name] = target.error_message;
+        return memo;
+      }, {});
+      cli.warn('Promotion to some apps failed');
+      cli.styledHash(failedTargets);
+    }
   })
 };

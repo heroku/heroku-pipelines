@@ -1,10 +1,13 @@
 'use strict';
 
-const cli  = require('heroku-cli-util');
-const nock = require('nock');
-const cmd  = require('../../../commands/pipelines/promote');
+const expect = require('chai').expect;
+const cli    = require('heroku-cli-util');
+const nock   = require('nock');
+const cmd    = require('../../../commands/pipelines/promote');
 
 describe('pipelines:promote', function() {
+  const api = 'https://api.heroku.com';
+
   const pipeline = {
     id: '123-pipeline-456',
     name: 'example-pipeline'
@@ -46,18 +49,18 @@ describe('pipelines:promote', function() {
 
   beforeEach(function () {
     cli.mockConsole();
-  });
 
-  it('promotes to all apps in the next stage', function() {
-    nock('https://api.heroku.com')
+    nock(api)
       .get(`/apps/${sourceApp.name}/pipeline-couplings`)
       .reply(200, sourceCoupling);
 
-    nock('https://api.heroku.com')
+    nock(api)
       .get(`/pipelines/${pipeline.id}/apps`)
       .reply(200, [sourceApp, targetApp1, targetApp2]);
+  });
 
-    const req = nock('https://api.heroku.com').post('/pipeline-promotions', {
+  it('promotes to all apps in the next stage', function() {
+    const req = nock(api).post('/pipeline-promotions', {
       pipeline: { id: pipeline.id },
       source:   { app: { id: sourceApp.id } },
       targets:  [
@@ -66,6 +69,28 @@ describe('pipelines:promote', function() {
       ]
     }).reply(201, promotion);
 
-    return cmd.run({ app: sourceApp.name }).then(req.done);
+    let pollCount = 0;
+    nock(api)
+      .get(`/pipeline-promotions/${promotion.id}/promotion-targets`)
+      .twice()
+      .reply(200, function() {
+        pollCount++;
+
+        return [{
+          app: { id: targetApp1.id },
+          status: 'successful',
+          error_message: null
+        }, {
+          app: { id: targetApp2.id },
+          // Return failed on the second poll loop
+          status: pollCount > 1 ? 'failed' : 'pending',
+          error_message: pollCount > 1 ? 'Failed because reasons' : null
+        }];
+      });
+
+    return cmd.run({ app: sourceApp.name }).then(function() {
+      req.done();
+      expect(cli.stdout).to.contain('Example-Production-Eu: Failed because reasons');
+    });
   });
 });
