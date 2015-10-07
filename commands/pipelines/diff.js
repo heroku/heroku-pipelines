@@ -44,6 +44,10 @@ function *getLatestCommitHash(heroku, appName, appId) {
   return { name: appName, hash: slug.commit };
 }
 
+function pluralize(word, quantity) {
+  return (quantity === 1 ? word : word + 's');
+}
+
 function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
   if (sourceApp.hash === downstreamApp.hash) {
     console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
@@ -58,7 +62,7 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
     json: true
   }).get(1);
 
-  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${diff.ahead_by} commit${diff.ahead_by === 1 ? '' : 's'}:`);
+  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${diff.ahead_by} ${pluralize('commit', diff.ahead_by)}:`);
   for (let i = diff.commits.length - 1; i >= 0; i--) {
     let commit = diff.commits[i];
     let abbreviatedHash = commit.sha.substring(0, 7);
@@ -72,8 +76,7 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
 module.exports = {
   topic: 'pipelines',
   command: 'diff',
-  description: 'TODO',
-  help: 'TODO',
+  description: 'compares the latest release of this app its downstream app(s)',
   needsAuth: true,
   needsApp: true,
   run: cli.command(function* (context, heroku) {
