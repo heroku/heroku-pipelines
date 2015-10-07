@@ -5,6 +5,7 @@ let disambiguate = require('../../lib/disambiguate');
 let co           = require('co');
 var bluebird     = require('bluebird');
 var request      = bluebird.promisify(require('request'));
+var _            = require('lodash');
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -36,7 +37,7 @@ module.exports = {
     }
 
     // TODO: Move something else.
-    function *getLatestCommitHash(appId) {
+    function *getLatestCommitHash(appName, appId) {
       const release = yield heroku.request({
         method: 'GET',
         path: `/apps/${appId}/releases`,
@@ -48,18 +49,43 @@ module.exports = {
         path: `/apps/${appId}/slugs/${release[0].slug.id}`,
         headers: { 'Accept': V3_HEADER }
       });
-      return slug.commit;
+      return { name: appName, hash: slug.commit };
     }
 
-    const app = context.app;
+    function *diff(sourceApp, downstreamApp, repo, githubToken) {
+      if (sourceApp.hash === downstreamApp.hash) {
+        console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
+        return;
+      }
+      const diff = yield request({
+        url: `https://api.github.com/repos/${repo}/compare/${downstreamApp.hash}...${sourceApp.hash}`,
+        headers: {
+          authorization: 'token ' + githubToken,
+          'user-agent': heroku.options.userAgent,
+        },
+        json: true
+      }).get(1);
 
-    const coupling = yield cli.action(`Fetching app info`, heroku.request({
+      console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${diff.ahead_by} commit${diff.ahead_by === 1 ? '' : 's'}:`);
+      for (let i = diff.commits.length - 1; i >= 0; i--) {
+        let commit = diff.commits[i];
+        let abbreviatedHash = commit.sha.substring(0, 7);
+        let authoredDate = commit.commit.author.date;
+        let authorName = commit.commit.author.name;
+        let message = commit.commit.message.split('\n')[0];
+        console.log(`  ${abbreviatedHash}  ${authoredDate}  ${message} (${authorName})`);
+      }
+    }
+
+    const targetAppName = context.app;
+    const coupling = yield heroku.request({
       method: 'GET',
-      path: `/apps/${app}/pipeline-couplings`,
+      path: `/apps/${targetAppName}/pipeline-couplings`,
       headers: { 'Accept': PIPELINES_HEADER }
-    }));
+    });
+    const targetAppId = coupling.app.id;
 
-    const allApps = yield cli.action(`Fetching apps from ${coupling.pipeline.name}`,
+    const allApps = yield cli.action(`Fetching apps from pipeline`,
       heroku.request({
         method: 'GET',
         path: `/pipelines/${coupling.pipeline.id}/apps`,
@@ -67,29 +93,30 @@ module.exports = {
       }));
 
     const sourceStage = coupling.stage;
-    const targetStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
-
-    if (targetStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
-      throw new Error(`Unable to diff ${app}`);
+    const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
+    if (downstreamStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
+      throw new Error(`Unable to diff ${targetAppName}`);
     }
-
     const downstreamApps = allApps.filter(function(app) {
-      return app.coupling.stage === targetStage;
+      return app.coupling.stage === downstreamStage;
     });
 
     if (downstreamApps.length < 1) {
-      throw new Error(`Cannot diff ${app} as there are no downstream apps configured`);
+      throw new Error(`Cannot diff ${targetAppName} as there are no downstream apps configured`);
     }
-    // TODO: What if downstreamApps.length > 1?
 
+    // Fetch the hash of the latest release for {target, downstream[0], .., downstream[n]} apps.
     const wrappedGetLatestCommitHash = co.wrap(getLatestCommitHash);
-    const hashes = yield cli.action(`Fetching commit data`, bluebird.all([
-      wrappedGetLatestCommitHash(downstreamApps[0].id),
-      wrappedGetLatestCommitHash(app)
-    ]));
+    const targetHash = yield cli.action(`Fetching latest app release for target app`,
+      wrappedGetLatestCommitHash(targetAppName, targetAppId));
+    const downstreamHashes = yield cli.action(`Fetching latest app releases for downstream apps`,
+        bluebird.all(downstreamApps.map(app => wrappedGetLatestCommitHash(app.name, app.id))));
 
-    if (hashes[0] === hashes[1]) {
-      console.log(`everything is up to date`);
+    // Try to refrain from doing any GitHub/kolkrabbi API requests if none of the downstream
+    // hashes differ from the target hash.
+    const uniqueDownstreamHashes = _.uniq(_.pluck(downstreamHashes, 'hash'));
+    if (uniqueDownstreamHashes.length === 1 && uniqueDownstreamHashes[0] === targetHash.hash) {
+      console.log(`\nEverything is up to date.`);
       return;
     }
 
@@ -98,24 +125,8 @@ module.exports = {
     const githubApp = yield kolkrabbiRequest(
       `https://kolkrabbi.heroku.com/apps/${coupling.app.id}/github`, heroku.options.token);
 
-    const diff = yield cli.action(`Fetching diff from GitHub`, request({
-      url: `https://api.github.com/repos/${githubApp.repo}/compare/${hashes[0]}...${hashes[1]}`,
-      headers: {
-        authorization: 'token ' + githubAccount.github.token,
-        'user-agent': heroku.options.userAgent,
-      },
-      json: true
-    }).get(1));
-
-    console.log(`\n${app} is ahead by ${diff.ahead_by} commit${diff.ahead_by === 1 ? '' : 's'}`);
-    for (let i = 0; i < diff.commits.length; i++) {
-      let commit = diff.commits[i];
-      let abbreviatedHash = commit.sha.substring(0, 8);
-      let authoredDate = commit.commit.author.date;
-      let authorName = commit.commit.author.name;
-      let message = commit.commit.message;
-      console.log(`  ${abbreviatedHash}  ${authoredDate}  ${message} (${authorName})`);
+    for (const downstreamHash of downstreamHashes) {
+      yield diff(targetHash, downstreamHash, githubApp.repo, githubAccount.github.token);
     }
-
   })
 };
