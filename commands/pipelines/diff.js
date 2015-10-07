@@ -21,8 +21,12 @@ function kolkrabbiRequest(url, token) {
     },
     json: true
   }).spread(function (res, body) {
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw new Error('failed to fetch diff because of an internal server error...');
+    if (res.statusCode === 404) {
+      let err = new Error('404');
+      err.name = 'NOT_FOUND';
+      throw err;
+    } else if (res.statusCode >= 500) {
+      throw new Error('failed to fetch diff because of an internal server error.');
     }
     return body;
   });
@@ -126,8 +130,18 @@ module.exports = {
 
     const githubAccount = yield kolkrabbiRequest(
       `https://kolkrabbi.heroku.com/account/github/token`, heroku.options.token);
-    const githubApp = yield kolkrabbiRequest(
-      `https://kolkrabbi.heroku.com/apps/${coupling.app.id}/github`, heroku.options.token);
+
+    let githubApp;
+    try {
+      githubApp = yield kolkrabbiRequest(
+        `https://kolkrabbi.heroku.com/apps/${coupling.app.id}/github`, heroku.options.token);
+    } catch (err) {
+      if (err.name === 'NOT_FOUND') {
+        throw new Error(`The target app (${targetAppName}) needs to be connected to GitHub!`);
+      } else {
+        throw err;
+      }
+    }
 
     for (const downstreamHash of downstreamHashes) {
       yield diff(targetHash, downstreamHash,
