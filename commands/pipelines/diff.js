@@ -1,7 +1,6 @@
 'use strict';
 
 let cli          = require('heroku-cli-util');
-let disambiguate = require('../../lib/disambiguate');
 let co           = require('co');
 var bluebird     = require('bluebird');
 var request      = bluebird.promisify(require('request'));
@@ -53,7 +52,7 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
     console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
     return;
   }
-  const diff = yield request({
+  const githubDiff = yield request({
     url: `https://api.github.com/repos/${repo}/compare/${downstreamApp.hash}...${sourceApp.hash}`,
     headers: {
       authorization: 'token ' + githubToken,
@@ -62,9 +61,9 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
     json: true
   }).get(1);
 
-  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${diff.ahead_by} ${pluralize('commit', diff.ahead_by)}:`);
-  for (let i = diff.commits.length - 1; i >= 0; i--) {
-    let commit = diff.commits[i];
+  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} ${pluralize('commit', githubDiff.ahead_by)}:`);
+  for (let i = githubDiff.commits.length - 1; i >= 0; i--) {
+    let commit = githubDiff.commits[i];
     let abbreviatedHash = commit.sha.substring(0, 7);
     let authoredDate = commit.commit.author.date;
     let authorName = commit.commit.author.name;
@@ -114,7 +113,7 @@ module.exports = {
       wrappedGetLatestCommitHash(targetAppName, targetAppId));
     const downstreamHashes = yield cli.action(`Fetching latest app releases for downstream apps`,
         bluebird.all(downstreamApps.map(function (app) {
-          return wrappedGetLatestCommitHash(app.name, app.id)
+          return wrappedGetLatestCommitHash(app.name, app.id);
         })));
 
     // Try to refrain from doing any GitHub/kolkrabbi API requests if none of the downstream
