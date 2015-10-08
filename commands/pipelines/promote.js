@@ -1,6 +1,7 @@
 'use strict';
 
 const cli = require('heroku-cli-util');
+const Promise = require('bluebird');
 
 const PROMOTION_ORDER = ["development", "staging", "production"];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -19,21 +20,15 @@ function isFailed(promotionTarget) {
 }
 
 function pollPromotionStatus(heroku, id) {
-  return new Promise(function(resolve, reject) {
-    setTimeout(function() {
-      heroku.request({
-        method: 'GET',
-        path: `/pipeline-promotions/${id}/promotion-targets`,
-        headers: { 'Accept': PIPELINES_HEADER, }
-      }).then(function(promotionTargets) {
-        if (promotionTargets.every(isComplete)) {
-          return resolve(promotionTargets);
-        }
+  return heroku.request({
+    method: 'GET',
+    path: `/pipeline-promotions/${id}/promotion-targets`,
+    headers: { 'Accept': PIPELINES_HEADER, }
+  }).then(function(targets) {
+    if (targets.every(isComplete)) { return targets; }
 
-        return pollPromotionStatus(heroku, id).then(resolve, reject);
-      }, reject);
-    });
-  }, 1000);
+    return Promise.delay(1000).then(pollPromotionStatus.bind(null, heroku, id));
+  });
 }
 
 module.exports = {
