@@ -2,9 +2,9 @@
 
 let cli          = require('heroku-cli-util');
 let co           = require('co');
-var bluebird     = require('bluebird');
-var request      = bluebird.promisify(require('request'));
-var _            = require('lodash');
+let bluebird     = require('bluebird');
+let request      = bluebird.promisify(require('request'));
+let _            = require('lodash');
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -25,7 +25,9 @@ function kolkrabbiRequest(url, token) {
       let err = new Error('404');
       err.name = 'NOT_FOUND';
       throw err;
-    } else if (res.statusCode >= 500) {
+    } else if (res.statusCode >= 400) {
+      // TODO: This could potentially catch some 4xx errors that we might want to handle with a
+      // specific error message.
       throw new Error('failed to fetch diff because of an internal server error.');
     }
     return body;
@@ -47,10 +49,6 @@ function *getLatestCommitHash(heroku, appName, appId) {
   return { name: appName, hash: slug.commit };
 }
 
-function pluralize(word, quantity) {
-  return (quantity === 1 ? word : word + 's');
-}
-
 function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
   if (sourceApp.hash === downstreamApp.hash) {
     console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
@@ -65,7 +63,7 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
     json: true
   }).get(1);
 
-  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} ${pluralize('commit', githubDiff.ahead_by)}:`);
+  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} commit${githubDiff.ahead_by === 1 ? '' : 's'}:`);
   for (let i = githubDiff.commits.length - 1; i >= 0; i--) {
     let commit = githubDiff.commits[i];
     let abbreviatedHash = commit.sha.substring(0, 7);
@@ -134,16 +132,15 @@ module.exports = {
     let githubApp;
     try {
       githubApp = yield kolkrabbiRequest(
-        `https://kolkrabbi.heroku.com/apps/${coupling.app.id}/github`, heroku.options.token);
+        `https://kolkrabbi.heroku.com/apps/${targetAppId}/github`, heroku.options.token);
     } catch (err) {
       if (err.name === 'NOT_FOUND') {
         throw new Error(`The target app (${targetAppName}) needs to be connected to GitHub!`);
-      } else {
-        throw err;
       }
+      throw err;
     }
 
-    for (const downstreamHash of downstreamHashes) {
+    for (let downstreamHash of downstreamHashes) {
       yield diff(targetHash, downstreamHash,
         githubApp.repo, githubAccount.github.token, heroku.options.userAgent);
     }
