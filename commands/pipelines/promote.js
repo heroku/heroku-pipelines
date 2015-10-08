@@ -1,7 +1,7 @@
 'use strict';
 
 const cli = require('heroku-cli-util');
-const Promise = require('bluebird');
+const BBPromise = require('bluebird');
 
 const PROMOTION_ORDER = ["development", "staging", "production"];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -27,7 +27,7 @@ function pollPromotionStatus(heroku, id) {
   }).then(function(targets) {
     if (targets.every(isComplete)) { return targets; }
 
-    return Promise.delay(1000).then(pollPromotionStatus.bind(null, heroku, id));
+    return BBPromise.delay(1000).then(pollPromotionStatus.bind(null, heroku, id));
   });
 }
 
