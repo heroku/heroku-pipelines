@@ -34,7 +34,7 @@ function kolkrabbiRequest(url, token) {
   });
 }
 
-function *getLatestCommitHash(heroku, appName, appId) {
+function* getLatestCommitHash(heroku, appName, appId) {
   const release = yield heroku.request({
     method: 'GET',
     path: `/apps/${appId}/releases`,
@@ -49,7 +49,7 @@ function *getLatestCommitHash(heroku, appName, appId) {
   return { name: appName, hash: slug.commit };
 }
 
-function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
+function* diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
   if (sourceApp.hash === downstreamApp.hash) {
     console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
     return;
@@ -74,6 +74,19 @@ function *diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
   }
 }
 
+function* fetchPipelineCoupling(heroku, appName) {
+  try {
+    return yield heroku.request({
+      method: 'GET',
+      path: `/apps/${appName}/pipeline-couplings`,
+      headers: { 'Accept': PIPELINES_HEADER }
+    });
+  } catch (err) {
+    console.log(err);
+    throw new Error(`This app (${appName}) does not seem to be a part of any pipeline.`);
+  }
+}
+
 module.exports = {
   topic: 'pipelines',
   command: 'diff',
@@ -82,11 +95,7 @@ module.exports = {
   needsApp: true,
   run: cli.command(function* (context, heroku) {
     const targetAppName = context.app;
-    const coupling = yield heroku.request({
-      method: 'GET',
-      path: `/apps/${targetAppName}/pipeline-couplings`,
-      headers: { 'Accept': PIPELINES_HEADER }
-    });
+    const coupling = yield fetchPipelineCoupling(heroku, targetAppName);
     const targetAppId = coupling.app.id;
 
     const allApps = yield cli.action(`Fetching apps from pipeline`,
