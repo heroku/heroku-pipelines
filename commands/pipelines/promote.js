@@ -88,16 +88,28 @@ module.exports = {
     const pollLoop = pollPromotionStatus(heroku, promotion.id);
     const promotionTargets = yield cli.action('Waiting for promotion to complete', pollLoop);
 
+
+    const appsByID = allApps.reduce(function(memo, app) {
+      memo[app.id] = app;
+      return memo;
+    }, {});
+
+    const styledTargets = promotionTargets.reduce(function(memo, target) {
+      const app = appsByID[target.app.id];
+      const details = [target.status];
+
+      if (isFailed(target)) { details.push(target.error_message); }
+
+      memo[app.name] = details;
+      return memo;
+    }, {});
+
     if (promotionTargets.every(isSucceeded)) {
-      cli.log('Promotion successful');
+      cli.log('\nPromotion successful');
     } else {
-      const failedTargets = promotionTargets.filter(isFailed).reduce(function(memo, target) {
-        const app = allApps.filter(function(app) { return app.id === target.app.id; })[0];
-        memo[app.name] = target.error_message;
-        return memo;
-      }, {});
-      cli.warn('Promotion to some apps failed');
-      cli.styledHash(failedTargets);
+      cli.warn('\nPromotion to some apps failed');
     }
+
+    cli.styledHash(styledTargets);
   })
 };

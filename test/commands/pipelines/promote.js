@@ -84,13 +84,14 @@ describe('pipelines:promote', function() {
           app: { id: targetApp2.id },
           // Return failed on the second poll loop
           status: pollCount > 1 ? 'failed' : 'pending',
-          error_message: pollCount > 1 ? 'Failed because reasons' : null
+          error_message: pollCount > 1 ? 'Because reasons' : null
         }];
       });
 
     return cmd.run({ app: sourceApp.name }).then(function() {
       req.done();
-      expect(cli.stdout).to.contain('Example-Production-Eu: Failed because reasons');
+      expect(cli.stdout).to.contain('failed');
+      expect(cli.stdout).to.contain('Because reasons');
     });
   });
 });
