@@ -92,7 +92,7 @@ function* diff(targetApp, downstreamApp, githubToken, herokuUserAgent) {
   const body = githubDiff[1];
   if (res.statusCode !== 200) {
     cli.hush({ statusCode: res.statusCode, body: body });
-    cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} because a GitHub diff resulted in an error`);
+    cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} because we were unable to perform a diff`);
     cli.log(`are you sure you have pushed your latest commits to GitHub?`);
     return;
   }

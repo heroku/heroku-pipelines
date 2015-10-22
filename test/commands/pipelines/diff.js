@@ -8,6 +8,7 @@ const cmd    = require('../../../commands/pipelines/diff');
 describe('pipelines:diff', function () {
   const api = 'https://api.heroku.com';
   const kolkrabbiApi = 'https://kolkrabbi.heroku.com';
+  const githubApi = 'https://api.github.com';
 
   const pipeline = {
     id: '123-pipeline-456',
@@ -178,6 +179,25 @@ describe('pipelines:diff', function () {
 
         expect(cli.stdout).to.contain(`${targetApp.name} is up to date with ${downstreamApp1.name}`);
         expect(cli.stdout).to.contain(`${targetApp.name} was not compared to ${downstreamApp2.name}`);
+      });
+    });
+
+    it('should handle non-200 responses from GitHub', function () {
+      const hashes = ['hash-1', 'hash-2'];
+      nock(api)
+        .get(`/apps/${targetApp.id}/slugs/${targetSlugId}`)
+        .reply(200, { commit: hashes[0] })
+        .get(`/apps/${downstreamApp1.id}/slugs/${downstreamSlugId}`)
+        .reply(200, { commit: hashes[1] });
+
+      const req = nock(githubApi)
+        .get(`/repos/${targetGithubApp.repo}/compare/${hashes[1]}...${hashes[0]}`)
+        .reply(404);
+
+      return cmd.run({ app: targetApp.name })
+      .then(function () {
+        req.done();
+        expect(cli.stdout).to.contain(`unable to perform a diff`);
       });
     });
 
