@@ -9,13 +9,14 @@ let _            = require('lodash');
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
 const PIPELINES_HEADER = V3_HEADER + '.pipelines';
+const KOLKRABBI_BASE_URL = 'https://kolkrabbi.heroku.com';
 
 // Helper functions
 
 function kolkrabbiRequest(url, token) {
   return request({
     method: 'GET',
-    url: url,
+    url: KOLKRABBI_BASE_URL + url,
     headers: {
       authorization: 'Bearer ' + token
     },
@@ -27,45 +28,80 @@ function kolkrabbiRequest(url, token) {
       throw err;
     } else if (res.statusCode >= 400) {
       // TODO: This could potentially catch some 4xx errors that we might want to handle with a
-      // specific error message.
+      // specific error message
       throw new Error('failed to fetch diff because of an internal server error.');
     }
     return body;
   });
 }
 
-function* getLatestCommitHash(heroku, appName, appId) {
-  const release = yield heroku.request({
-    method: 'GET',
-    path: `/apps/${appId}/releases`,
-    headers: { 'Accept': V3_HEADER, 'Range': 'version ..; order=desc,max=1' },
-    partial: true
-  });
-  const slug = yield heroku.request({
-    method: 'GET',
-    path: `/apps/${appId}/slugs/${release[0].slug.id}`,
-    headers: { 'Accept': V3_HEADER }
-  });
-  return { name: appName, hash: slug.commit };
+function* getAppInfo(heroku, appName, appId) {
+  // Find GitHub connection for the app
+  let githubApp;
+  try {
+    githubApp = yield kolkrabbiRequest(`/apps/${appId}/github`, heroku.options.token);
+  } catch (err) {
+    cli.hush(err);
+    return { name: appName, repo: null, hash: null };
+  }
+
+  // Find the commit hash of the latest release for this app
+  let slug;
+  try {
+    const release = yield heroku.request({
+      method: 'GET',
+      path: `/apps/${appId}/releases`,
+      headers: { 'Accept': V3_HEADER, 'Range': 'version ..; order=desc,max=1' },
+      partial: true
+    });
+    if (release[0].slug === null) {
+      throw new Error(`no release found for ${appName}`);
+    }
+    slug = yield heroku.request({
+      method: 'GET',
+      path: `/apps/${appId}/slugs/${release[0].slug.id}`,
+      headers: { 'Accept': V3_HEADER }
+    });
+  } catch (err) {
+    cli.hush(err);
+    return { name: appName, repo: githubApp.repo, hash: null };
+  }
+
+  return { name: appName, repo: githubApp.repo, hash: slug.commit };
 }
 
-function* diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
-  if (sourceApp.hash === downstreamApp.hash) {
-    cli.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
-    return;
+function* diff(targetApp, downstreamApp, githubToken, herokuUserAgent) {
+  if (downstreamApp.repo === null) {
+    return cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} as ${downstreamApp.name} is not connected to GitHub`);
+  } else if (downstreamApp.repo !== targetApp.repo) {
+    return cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} as ${downstreamApp.name} is not connected to the same GitHub repo as ${targetApp.name}`);
+  } else if (downstreamApp.hash === null) {
+    return cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} as ${downstreamApp.name} does not have any releases`);
+  } else if (downstreamApp.hash === targetApp.hash) {
+    return cli.log(`\n${targetApp.name} is up to date with ${downstreamApp.name}`);
   }
+
+  // Do the Github diff!
   const githubDiff = yield request({
-    url: `https://api.github.com/repos/${repo}/compare/${downstreamApp.hash}...${sourceApp.hash}`,
+    url: `https://api.github.com/repos/${targetApp.repo}/compare/${downstreamApp.hash}...${targetApp.hash}`,
     headers: {
       authorization: 'token ' + githubToken,
-      'user-agent': herokuUserAgent,
+      'user-agent': herokuUserAgent
     },
     json: true
-  }).get(1);
+  });
+  const res = githubDiff[0];
+  const body = githubDiff[1];
+  if (res.statusCode !== 200) {
+    cli.hush({ statusCode: res.statusCode, body: body });
+    cli.log(`\n${targetApp.name} was not compared to ${downstreamApp.name} because a GitHub diff resulted in an error`);
+    cli.log(`are you sure you have pushed your latest commits to GitHub?`);
+    return;
+  }
 
-  cli.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} commit${githubDiff.ahead_by === 1 ? '' : 's'}:`);
-  for (let i = githubDiff.commits.length - 1; i >= 0; i--) {
-    let commit = githubDiff.commits[i];
+  cli.log(`\n${targetApp.name} is ahead of ${downstreamApp.name} by ${body.ahead_by} commit${body.ahead_by === 1 ? '' : 's'}:`);
+  for (let i = body.commits.length - 1; i >= 0; i--) {
+    let commit = body.commits[i];
     let abbreviatedHash = commit.sha.substring(0, 7);
     let authoredDate = commit.commit.author.date;
     let authorName = commit.commit.author.name;
@@ -114,41 +150,31 @@ module.exports = {
       return cli.error(`Cannot diff ${targetAppName} as there are no downstream apps configured`);
     }
 
-    // Fetch the hash of the latest release for {target, downstream[0], .., downstream[n]} apps.
-    const wrappedGetLatestCommitHash = co.wrap(_.partial(getLatestCommitHash, heroku));
-    const targetHash = yield cli.action(`Fetching latest app release for target app`,
-      wrappedGetLatestCommitHash(targetAppName, targetAppId));
-    const downstreamHashes = yield cli.action(`Fetching latest app releases for downstream apps`,
-        bluebird.all(downstreamApps.map(function (app) {
-          return wrappedGetLatestCommitHash(app.name, app.id);
-        })));
+    // Fetch GitHub repo/latest release hash for [target, downstream[0], .., downstream[n]] apps
+    const wrappedGetAppInfo = co.wrap(_.partial(getAppInfo, heroku));
+    const appInfoPromises = [wrappedGetAppInfo(targetAppName, targetAppId)];
+    downstreamApps.forEach(function (app) {
+      appInfoPromises.push(wrappedGetAppInfo(app.name, app.id));
+    });
+    const appInfo = yield cli.action(`Fetching release info for all apps`,
+      bluebird.all(appInfoPromises));
 
-    // Try to refrain from doing any GitHub/kolkrabbi API requests if none of the downstream
-    // hashes differ from the target hash.
-    const uniqueDownstreamHashes = _.uniq(_.pluck(downstreamHashes, 'hash'));
-    if (uniqueDownstreamHashes.length === 1 && uniqueDownstreamHashes[0] === targetHash.hash) {
-      cli.log(`\nEverything is up to date`);
-      return;
+    // Verify the target app
+    let targetAppInfo = appInfo[0];
+    if (targetAppInfo.repo === null) {
+      return cli.error(`${targetAppName} does not seem to be connected to GitHub!`);
+    } else if (targetAppInfo.hash === null) {
+      return cli.error(`No release was found for ${targetAppName}, unable to diff`);
     }
 
-    const githubAccount = yield kolkrabbiRequest(
-      `https://kolkrabbi.heroku.com/account/github/token`, heroku.options.token);
+    // Fetch GitHub token for the user
+    const githubAccount = yield kolkrabbiRequest(`/account/github/token`, heroku.options.token);
 
-    let githubApp;
-    try {
-      githubApp = yield kolkrabbiRequest(
-        `https://kolkrabbi.heroku.com/apps/${targetAppId}/github`, heroku.options.token);
-    } catch (err) {
-      if (err.name === 'NOT_FOUND') {
-        return cli.error(`The target app (${targetAppName}) needs to be connected to GitHub!`);
-      }
-      cli.hush(err);
-      return cli.error(`Unexpected error while trying to diff ${targetAppName}`);
-    }
-
-    for (let downstreamHash of downstreamHashes) {
-      yield diff(targetHash, downstreamHash,
-        githubApp.repo, githubAccount.github.token, heroku.options.userAgent);
+    // Diff [{target, downstream[0]}, {target, downstream[1]}, .., {target, downstream[n]}]
+    const downstreamAppsInfo = appInfo.slice(1);
+    for (let downstreamAppInfo of downstreamAppsInfo) {
+      const userAgent = heroku.options.userAgent;
+      yield diff(targetAppInfo, downstreamAppInfo, githubAccount.github.token, userAgent);
     }
   })
 };
