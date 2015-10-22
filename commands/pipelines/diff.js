@@ -66,7 +66,6 @@ function* getAppInfo(heroku, appName, appId) {
     cli.hush(err);
     return { name: appName, repo: githubApp.repo, hash: null };
   }
-
   return { name: appName, repo: githubApp.repo, hash: slug.commit };
 }
 
@@ -81,7 +80,7 @@ function* diff(targetApp, downstreamApp, githubToken, herokuUserAgent) {
     return cli.log(`\n${targetApp.name} is up to date with ${downstreamApp.name}`);
   }
 
-  // Do the Github diff!
+  // Do the actual Github diff
   const githubDiff = yield request({
     url: `https://api.github.com/repos/${targetApp.repo}/compare/${downstreamApp.hash}...${targetApp.hash}`,
     headers: {
@@ -173,8 +172,8 @@ module.exports = {
     // Diff [{target, downstream[0]}, {target, downstream[1]}, .., {target, downstream[n]}]
     const downstreamAppsInfo = appInfo.slice(1);
     for (let downstreamAppInfo of downstreamAppsInfo) {
-      const userAgent = heroku.options.userAgent;
-      yield diff(targetAppInfo, downstreamAppInfo, githubAccount.github.token, userAgent);
+      yield diff(
+        targetAppInfo, downstreamAppInfo, githubAccount.github.token, heroku.options.userAgent);
     }
   })
 };
