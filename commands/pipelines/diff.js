@@ -4,7 +4,6 @@ let cli          = require('heroku-cli-util');
 let co           = require('co');
 let bluebird     = require('bluebird');
 let request      = bluebird.promisify(require('request'));
-let _            = require('lodash');
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -150,10 +149,10 @@ module.exports = {
     }
 
     // Fetch GitHub repo/latest release hash for [target, downstream[0], .., downstream[n]] apps
-    const wrappedGetAppInfo = co.wrap(_.partial(getAppInfo, heroku));
-    const appInfoPromises = [wrappedGetAppInfo(targetAppName, targetAppId)];
+    const wrappedGetAppInfo = co.wrap(getAppInfo);
+    const appInfoPromises = [wrappedGetAppInfo(heroku, targetAppName, targetAppId)];
     downstreamApps.forEach(function (app) {
-      appInfoPromises.push(wrappedGetAppInfo(app.name, app.id));
+      appInfoPromises.push(wrappedGetAppInfo(heroku, app.name, app.id));
     });
     const appInfo = yield cli.action(`Fetching release info for all apps`,
       bluebird.all(appInfoPromises));
