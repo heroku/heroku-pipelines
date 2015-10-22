@@ -45,7 +45,6 @@ describe('pipelines:diff', function () {
 
   beforeEach(function () {
     cli.mockConsole();
-
     /*
     nock(api)
       .get(`/apps/${targetApp.name}/pipeline-couplings`)
@@ -66,14 +65,11 @@ describe('pipelines:diff', function () {
       .get(`/apps/${targetApp.name}/pipeline-couplings`)
       .reply(404, { message: 'Not found.' });
 
-    return cmd.run({ app: targetApp.name })
-    .then(function() {
-      expect.fail('this should not happen');
-    })
-    .catch(function (err) {
-      req.done();
-      expect(err).to.be.an('error');
-    });
+      return cmd.run({ app: targetApp.name })
+      .then(function () {
+        req.done()
+        expect(cli.stderr).to.contain('to be a part of any pipeline');
+      });
   });
 
 });

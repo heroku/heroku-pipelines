@@ -51,7 +51,7 @@ function* getLatestCommitHash(heroku, appName, appId) {
 
 function* diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
   if (sourceApp.hash === downstreamApp.hash) {
-    console.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
+    cli.log(`\neverything is up to date between ${sourceApp.name} and ${downstreamApp.name}`);
     return;
   }
   const githubDiff = yield request({
@@ -63,27 +63,14 @@ function* diff(sourceApp, downstreamApp, repo, githubToken, herokuUserAgent) {
     json: true
   }).get(1);
 
-  console.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} commit${githubDiff.ahead_by === 1 ? '' : 's'}:`);
+  cli.log(`\n${sourceApp.name} is ahead of ${downstreamApp.name} by ${githubDiff.ahead_by} commit${githubDiff.ahead_by === 1 ? '' : 's'}:`);
   for (let i = githubDiff.commits.length - 1; i >= 0; i--) {
     let commit = githubDiff.commits[i];
     let abbreviatedHash = commit.sha.substring(0, 7);
     let authoredDate = commit.commit.author.date;
     let authorName = commit.commit.author.name;
     let message = commit.commit.message.split('\n')[0];
-    console.log(`  ${abbreviatedHash}  ${authoredDate}  ${message} (${authorName})`);
-  }
-}
-
-function* fetchPipelineCoupling(heroku, appName) {
-  try {
-    return yield heroku.request({
-      method: 'GET',
-      path: `/apps/${appName}/pipeline-couplings`,
-      headers: { 'Accept': PIPELINES_HEADER }
-    });
-  } catch (err) {
-    console.log(err);
-    throw new Error(`This app (${appName}) does not seem to be a part of any pipeline.`);
+    cli.log(`  ${abbreviatedHash}  ${authoredDate}  ${message} (${authorName})`);
   }
 }
 
@@ -95,7 +82,16 @@ module.exports = {
   needsApp: true,
   run: cli.command(function* (context, heroku) {
     const targetAppName = context.app;
-    const coupling = yield fetchPipelineCoupling(heroku, targetAppName);
+    let coupling;
+    try {
+      coupling = yield heroku.request({
+        method: 'GET',
+        path: `/apps/${targetAppName}/pipeline-couplings`,
+        headers: { 'Accept': PIPELINES_HEADER }
+      });
+    } catch (err) {
+      return cli.error(`This app (${targetAppName}) does not seem to be a part of any pipeline`);
+    }
     const targetAppId = coupling.app.id;
 
     const allApps = yield cli.action(`Fetching apps from pipeline`,
@@ -108,14 +104,14 @@ module.exports = {
     const sourceStage = coupling.stage;
     const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
     if (downstreamStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
-      throw new Error(`Unable to diff ${targetAppName}`);
+      return cli.error(`Unable to diff ${targetAppName}`);
     }
     const downstreamApps = allApps.filter(function(app) {
       return app.coupling.stage === downstreamStage;
     });
 
     if (downstreamApps.length < 1) {
-      throw new Error(`Cannot diff ${targetAppName} as there are no downstream apps configured`);
+      return cli.error(`Cannot diff ${targetAppName} as there are no downstream apps configured`);
     }
 
     // Fetch the hash of the latest release for {target, downstream[0], .., downstream[n]} apps.
@@ -131,7 +127,7 @@ module.exports = {
     // hashes differ from the target hash.
     const uniqueDownstreamHashes = _.uniq(_.pluck(downstreamHashes, 'hash'));
     if (uniqueDownstreamHashes.length === 1 && uniqueDownstreamHashes[0] === targetHash.hash) {
-      console.log(`\nEverything is up to date.`);
+      cli.log(`\nEverything is up to date`);
       return;
     }
 
@@ -144,9 +140,10 @@ module.exports = {
         `https://kolkrabbi.heroku.com/apps/${targetAppId}/github`, heroku.options.token);
     } catch (err) {
       if (err.name === 'NOT_FOUND') {
-        throw new Error(`The target app (${targetAppName}) needs to be connected to GitHub!`);
+        return cli.error(`The target app (${targetAppName}) needs to be connected to GitHub!`);
       }
-      throw err;
+      cli.hush(err);
+      return cli.error(`Unexpected error while trying to diff ${targetAppName}`);
     }
 
     for (let downstreamHash of downstreamHashes) {
