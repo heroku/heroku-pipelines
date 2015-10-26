@@ -67,6 +67,12 @@ describe('pipelines:diff', function () {
       .reply(200, [targetApp, downstreamApp1, downstreamApp2]);
   }
 
+  function mockGithubAccount() {
+    nock(kolkrabbiApi)
+      .get(`/account/github/token`)
+      .reply(200, { github: { token: 'github-token' } });
+  }
+
   beforeEach(function () {
     cli.mockConsole();
   });
@@ -75,7 +81,7 @@ describe('pipelines:diff', function () {
     nock.cleanAll();
   });
 
-  describe('for app without a pipeline', function () {
+  describe('for apps without a pipeline', function () {
     it('should return an error', function () {
       const req = nock(api)
         .get(`/apps/${targetApp.name}/pipeline-couplings`)
@@ -89,9 +95,11 @@ describe('pipelines:diff', function () {
     });
   });
 
-  describe('for app with a pipeline but no downstream apps', function () {
-    it('should return an error', function () {
+  describe('for apps with a pipeline', function () {
+    beforeEach(function () {
       mockPipelineCoupling();
+    });
+    it('should return an error for pipelines with no downstream apps', function () {
       nock(api)
         .get(`/pipelines/${pipeline.id}/apps`)
         .reply(200, [targetApp]);
@@ -101,12 +109,23 @@ describe('pipelines:diff', function () {
         expect(cli.stderr).to.contain('no downstream apps');
       });
     });
+    it('should return an error if no GitHub account is associated', function () {
+      mockApps();
+      nock(kolkrabbiApi)
+        .get(`/account/github/token`)
+        .reply(404);
+      return cmd.run({ app: targetApp.name })
+      .then(function () {
+        expect(cli.stderr).to.contain('You need to enable the GitHub integration');
+      });
+    });
   });
 
   describe('for invalid apps with a pipeline', function () {
     beforeEach(function () {
       mockPipelineCoupling();
       mockApps();
+      mockGithubAccount();
     });
 
     it('should return an error if the app is not connected to GitHub', function () {
@@ -144,6 +163,7 @@ describe('pipelines:diff', function () {
     beforeEach(function () {
       mockPipelineCoupling();
       mockApps();
+      mockGithubAccount();
 
       // Mock the GitHub apps for targetApp and downstreamApp1:
       nock(kolkrabbiApi)
@@ -152,9 +172,7 @@ describe('pipelines:diff', function () {
         .get(`/apps/${downstreamApp1.id}/github`)
         .reply(200, downstreamApp1Github)
         .get(`/apps/${downstreamApp2.id}/github`)
-        .reply(200, downstreamApp2Github)
-        .get(`/account/github/token`)
-        .reply(200, { github: { token: 'github-token' } });
+        .reply(200, downstreamApp2Github);
 
       // Mock latest release/slug endpoints for two apps:
       nock(api)
