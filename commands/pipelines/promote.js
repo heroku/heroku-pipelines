@@ -31,6 +31,10 @@ function pollPromotionStatus(heroku, id) {
   });
 }
 
+function allTargetAppsForStage(sourceStage, targetStage, allApps) {
+
+}
+
 module.exports = {
   topic: 'pipelines',
   command: 'promote',
@@ -39,7 +43,12 @@ module.exports = {
   needsApp: true,
   needsAuth: true,
   flags: [
-    {name: 'to', char: 't', description: 'comma separated list of apps to promote to', hasValue: true}
+    {
+      name: 'to',
+      char: 't',
+      description: 'comma separated list of apps to promote to',
+      hasValue: true
+    }
   ],
   run: cli.command(function* (context, heroku) {
     const app = context.app;
@@ -61,38 +70,34 @@ module.exports = {
 
     let promotionActionName = '';
     let targetApps = [];
-    if (context.flags.to){
+    if (context.flags && context.flags.to) {
       // The user specified a specific set of apps they want to target
       // We don't have to infer the apps or the stage they want to promote to
 
-      let targetAppNames = context.flags.to.split(',').filter((appName)=>{
+      let targetAppNames = context.flags.to.split(',').filter((appName) => {
         // Strip out any empty app names due to something like a trailing comma
         return appName.length >= 1;
       });
 
       // Now let's make sure that we can find every target app they specified
       // The only requirement is that the app be in this pipeline. They can be at any stage.
-      targetApps = targetAppNames.map((targetAppName)=>{
-        console.log(`target app name: ${targetAppName} and source app name ${app}`);
-        if (targetAppName === app){
-          throw new Error(`Cannot promote from an app to itself: ${targetAppName}. Specify a different target app.`);
+      targetApps = targetAppNames.map((targetAppNameOrId) => {
+        if (targetAppNameOrId === app){
+          throw new Error(`Cannot promote from an app to itself: ${targetAppNameOrId}. Specify a different target app.`);
         }
-        let retVal = allApps.find((app)=>{
-          return (app.name === targetAppName);
+
+        let retVal = allApps.find((app)=> {
+          return (app.name === targetAppNameOrId) || (app.id === targetAppNameOrId);
         });
+
         if (!retVal){
-          throw new Error(`Cannot find app ${targetAppName}`);
+          throw new Error(`Cannot find app ${targetAppNameOrId}`);
         }
+
         return retVal;
       });
 
-      if (targetApps.length < 1) {
-        // I don't believe this is possible due to above checkes, but it's similar to the check done below, and is safer
-        throw new Error(`You must specify an app to promote to if using -t`);
-      }
-
       promotionActionName = `Starting promotion to apps: ${targetAppNames.toString()}`;
-
     } else {
       const targetStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
 
@@ -124,7 +129,6 @@ module.exports = {
 
     const pollLoop = pollPromotionStatus(heroku, promotion.id);
     const promotionTargets = yield cli.action('Waiting for promotion to complete', pollLoop);
-
 
     const appsByID = allApps.reduce(function(memo, app) {
       memo[app.id] = app;
