@@ -60,7 +60,7 @@ module.exports = {
     const sourceStage = coupling.stage;
 
     let promotionActionName = '';
-    let targetApps = []
+    let targetApps = [];
     if (context.flags.to){
       // The user specified a specific set of apps they want to target
       // We don't have to infer the apps or the stage they want to promote to
@@ -74,11 +74,11 @@ module.exports = {
       // The only requirement is that the app be in this pipeline. They can be at any stage.
       targetApps = targetAppNames.map((targetAppName)=>{
         console.log(`target app name: ${targetAppName} and source app name ${app}`);
-        if (targetAppName == app){
-          throw new Error(`Cannot promote from an app to itself: ${targetAppName}. Specify a different target app.`)
+        if (targetAppName === app){
+          throw new Error(`Cannot promote from an app to itself: ${targetAppName}. Specify a different target app.`);
         }
         let retVal = allApps.find((app)=>{
-          return (app.name == targetAppName);
+          return (app.name === targetAppName);
         });
         if (!retVal){
           throw new Error(`Cannot find app ${targetAppName}`);
