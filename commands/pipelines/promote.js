@@ -1,5 +1,6 @@
 'use strict';
 
+const assert = require('assert');
 const cli = require('heroku-cli-util');
 const BBPromise = require('bluebird');
 
@@ -31,8 +32,57 @@ function pollPromotionStatus(heroku, id) {
   });
 }
 
-function allTargetAppsForStage(sourceStage, targetStage, allApps) {
+function* getCoupling(heroku, app) {
+  return yield cli.action(`Fetching app info`, heroku.request({
+    method: 'GET',
+    path: `/apps/${app}/pipeline-couplings`,
+    headers: { 'Accept': PIPELINES_HEADER }
+  }));
+}
 
+function* getApps(heroku, pipeline) {
+  return yield cli.action(`Fetching apps from ${pipeline.name}`,
+    heroku.request({
+      method: 'GET',
+      path: `/pipelines/${pipeline.id}/apps`,
+      headers: { 'Accept': PIPELINES_HEADER }
+    }));
+}
+
+function* promote(heroku, promotionActionName, pipelineId, sourceAppId, targetApps) {
+  return yield cli.action(promotionActionName, heroku.request({
+    method: 'POST',
+    path: `/pipeline-promotions`,
+    headers: { 'Accept': PIPELINES_HEADER, },
+    body: {
+      pipeline: { id: pipelineId },
+      source:   { app: { id: sourceAppId } },
+      targets:  targetApps.map(function(app) { return { app: { id: app.id } }; })
+    }
+  }));
+}
+
+function assertNotPromotingToSelf(source, target) {
+  assert.notEqual(source, target, `Cannot promote from an app to itself: ${target}. Specify a different target app.`);
+}
+
+function assertValidPromotion(app, source, target) {
+  if (target === null || PROMOTION_ORDER.indexOf(source) < 0) {
+    throw new Error(`Cannot promote ${app} from '${source}' stage`);
+  }
+}
+
+function assertApps(app, targetApps, targetStage) {
+  if (targetApps.length < 1) {
+    throw new Error(`Cannot promote from ${app} as there are no downstream apps in ${targetStage} stage`);
+  }
+}
+
+function findAppInPipeline(apps, target) {
+  const found = apps.find((app) => (app.name === target) || (app.id === target));
+  assert(found, `Cannot find app ${target}`);
+
+  return found;
 }
 
 module.exports = {
@@ -52,20 +102,8 @@ module.exports = {
   ],
   run: cli.command(function* (context, heroku) {
     const app = context.app;
-
-    const coupling = yield cli.action(`Fetching app info`, heroku.request({
-      method: 'GET',
-      path: `/apps/${app}/pipeline-couplings`,
-      headers: { 'Accept': PIPELINES_HEADER }
-    }));
-
-    const allApps = yield cli.action(`Fetching apps from ${coupling.pipeline.name}`,
-      heroku.request({
-        method: 'GET',
-        path: `/pipelines/${coupling.pipeline.id}/apps`,
-        headers: { 'Accept': PIPELINES_HEADER }
-      }));
-
+    const coupling = yield getCoupling(heroku, app);
+    const allApps = yield getApps(heroku, coupling.pipeline);
     const sourceStage = coupling.stage;
 
     let promotionActionName = '';
@@ -74,58 +112,32 @@ module.exports = {
       // The user specified a specific set of apps they want to target
       // We don't have to infer the apps or the stage they want to promote to
 
-      let targetAppNames = context.flags.to.split(',').filter((appName) => {
-        // Strip out any empty app names due to something like a trailing comma
-        return appName.length >= 1;
-      });
+      // Strip out any empty app names due to something like a trailing comma
+      const targetAppNames = context.flags.to.split(',').filter((appName) => appName.length >= 1);
 
       // Now let's make sure that we can find every target app they specified
       // The only requirement is that the app be in this pipeline. They can be at any stage.
       targetApps = targetAppNames.map((targetAppNameOrId) => {
-        if (targetAppNameOrId === app){
-          throw new Error(`Cannot promote from an app to itself: ${targetAppNameOrId}. Specify a different target app.`);
-        }
-
-        let retVal = allApps.find((app)=> {
-          return (app.name === targetAppNameOrId) || (app.id === targetAppNameOrId);
-        });
-
-        if (!retVal){
-          throw new Error(`Cannot find app ${targetAppNameOrId}`);
-        }
-
-        return retVal;
+        assertNotPromotingToSelf(app, targetAppNameOrId);
+        return findAppInPipeline(allApps, targetAppNameOrId);
       });
 
       promotionActionName = `Starting promotion to apps: ${targetAppNames.toString()}`;
     } else {
       const targetStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
 
-      if (targetStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
-        throw new Error(`Cannot promote ${app} from '${sourceStage}' stage`);
-      }
+      assertValidPromotion(app, sourceStage, targetStage);
 
-      targetApps = allApps.filter(function(app) {
-        return app.coupling.stage === targetStage;
-      });
+      targetApps = allApps.filter((app) => app.coupling.stage === targetStage);
 
-      if (targetApps.length < 1) {
-        throw new Error(`Cannot promote from ${app} as there are no downstream apps in ${targetStage} stage`);
-      }
+      assertApps(app, targetApps, targetStage);
 
       promotionActionName = `Starting promotion to ${targetStage}`;
     }
 
-    const promotion = yield cli.action(promotionActionName, heroku.request({
-      method: 'POST',
-      path: `/pipeline-promotions`,
-      headers: { 'Accept': PIPELINES_HEADER, },
-      body: {
-        pipeline: { id: coupling.pipeline.id },
-        source:   { app: { id: coupling.app.id } },
-        targets:  targetApps.map(function(app) { return { app: { id: app.id } }; })
-      }
-    }));
+    const promotion = yield promote(
+      heroku, promotionActionName, coupling.pipeline.id, coupling.app.id, targetApps
+    );
 
     const pollLoop = pollPromotionStatus(heroku, promotion.id);
     const promotionTargets = yield cli.action('Waiting for promotion to complete', pollLoop);
