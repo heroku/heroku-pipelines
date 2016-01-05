@@ -108,6 +108,24 @@ function* diff(targetApp, downstreamApp, githubToken, herokuUserAgent) {
   }
 }
 
+function* findDownstreamApps(heroku, coupling) {
+  const allApps = yield cli.action(`Fetching apps from pipeline`,
+    heroku.request({
+      method: 'GET',
+      path: `/pipelines/${coupling.pipeline.id}/apps`,
+      headers: { Accept: PIPELINES_HEADER }
+    }));
+
+  const sourceStage = coupling.stage;
+  const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
+  if (downstreamStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
+    throw new Error(`Unable to infer the downstream stage for ${sourceStage}`);
+  }
+  return allApps.filter(function (app) {
+    return app.coupling.stage === downstreamStage;
+  });
+}
+
 module.exports = {
   topic: 'pipelines',
   command: 'diff',
@@ -128,24 +146,26 @@ module.exports = {
     }
     const targetAppId = coupling.app.id;
 
-    const allApps = yield cli.action(`Fetching apps from pipeline`,
-      heroku.request({
-        method: 'GET',
-        path: `/pipelines/${coupling.pipeline.id}/apps`,
-        headers: { 'Accept': PIPELINES_HEADER }
-      }));
-
-    const sourceStage = coupling.stage;
-    const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
-    if (downstreamStage === null || PROMOTION_ORDER.indexOf(sourceStage) < 0) {
+    // Find downstream apps
+    let downstreamApps;
+    try {
+      downstreamApps = yield findDownstreamApps(heroku, coupling);
+    } catch (err) {
       return cli.error(`Unable to diff ${targetAppName}`);
     }
-    const downstreamApps = allApps.filter(function(app) {
-      return app.coupling.stage === downstreamStage;
-    });
 
     if (downstreamApps.length < 1) {
       return cli.error(`Cannot diff ${targetAppName} as there are no downstream apps configured`);
+    }
+
+    // Fetch GitHub token for the user
+    let githubAccount;
+    try {
+      githubAccount = yield kolkrabbiRequest(`/account/github/token`, heroku.options.token);
+    } catch (err) {
+      cli.hush(err);
+      cli.error(`You need to enable the GitHub integration for your Heroku account`);
+      return cli.error(`See https://devcenter.heroku.com/articles/github-integration for help`);
     }
 
     // Fetch GitHub repo/latest release hash for [target, downstream[0], .., downstream[n]] apps
@@ -164,9 +184,6 @@ module.exports = {
     } else if (targetAppInfo.hash === null) {
       return cli.error(`No release was found for ${targetAppName}, unable to diff`);
     }
-
-    // Fetch GitHub token for the user
-    const githubAccount = yield kolkrabbiRequest(`/account/github/token`, heroku.options.token);
 
     // Diff [{target, downstream[0]}, {target, downstream[1]}, .., {target, downstream[n]}]
     const downstreamAppsInfo = appInfo.slice(1);
