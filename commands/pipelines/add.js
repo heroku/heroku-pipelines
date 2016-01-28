@@ -20,6 +20,8 @@ module.exports = {
     {name: 'stage', char: 's', description: 'stage of first app in pipeline', hasValue: true}
   ],
   run: cli.command(function* (context, heroku) {
+    const app = context.app;
+
     var stage;
     let guesses = infer(context.app);
     let questions = [];
@@ -32,7 +34,7 @@ module.exports = {
       questions.push({
         type: "list",
         name: "stage",
-        message: `Stage of ${context.app}`,
+        message: `Stage of ${app}`,
         choices: stageNames,
         default: guesses[1]
       });
