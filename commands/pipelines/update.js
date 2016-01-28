@@ -13,10 +13,10 @@ function getCoupling(heroku, app) {
   });
 }
 
-function patchCoupling(heroku, coupling, stage) {
+function patchCoupling(heroku, id, stage) {
   return heroku.request({
     method: 'PATCH',
-    path: `/pipeline-couplings/${coupling.id}`,
+    path: `/pipeline-couplings/${id}`,
     body: {stage: stage},
     headers: { 'Accept': PIPELINES_HEADER }
   });
@@ -24,7 +24,7 @@ function patchCoupling(heroku, coupling, stage) {
 
 function updateCoupling(heroku, app, stage) {
   return getCoupling(heroku, app)
-           .then(coupling => patchCoupling(heroku, coupling, stage));
+           .then(coupling => patchCoupling(heroku, coupling.id, stage));
 }
 
 module.exports = {
