@@ -11,6 +11,8 @@ function* run(context, heroku) {
   let guesses = infer(context.app);
   let questions = [];
 
+  const app = context.app;
+
   if (context.args.name) {
     name = context.args.name;
   } else {
@@ -27,7 +29,7 @@ function* run(context, heroku) {
     questions.push({
       type: "list",
       name: "stage",
-      message: `Stage of ${context.app}`,
+      message: `Stage of ${app}`,
       choices: stages,
       default: guesses[1]
     });
@@ -44,11 +46,11 @@ function* run(context, heroku) {
   let pipeline = yield cli.action(`Creating ${name} pipeline`, promise);
   promise = heroku.request({
     method: 'POST',
-    path: `/apps/${context.app}/pipeline-couplings`,
+    path: `/apps/${app}/pipeline-couplings`,
     body: {pipeline: {id: pipeline.id}, stage: stage},
     headers: { 'Accept': 'application/vnd.heroku+json; version=3.pipelines' }
   }); // heroku.apps(app_id).pipline_couplings().create(body);
-  yield cli.action(`Adding ${context.app} to ${pipeline.name} pipeline as ${stage}`, promise);
+  yield cli.action(`Adding ${app} to ${pipeline.name} pipeline as ${stage}`, promise);
 }
 
 module.exports = {
