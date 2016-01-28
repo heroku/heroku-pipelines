@@ -2,6 +2,31 @@
 
 let cli = require('heroku-cli-util');
 
+const V3_HEADER = 'application/vnd.heroku+json; version=3';
+const PIPELINES_HEADER = V3_HEADER + '.pipelines';
+
+function getCoupling(heroku, app) {
+  return heroku.request({
+    method: 'GET',
+    path: `/apps/${app}/pipeline-couplings`,
+    headers: { 'Accept': PIPELINES_HEADER }
+  });
+}
+
+function patchCoupling(heroku, coupling, stage) {
+  return heroku.request({
+    method: 'PATCH',
+    path: `/pipeline-couplings/${coupling.id}`,
+    body: {stage: stage},
+    headers: { 'Accept': PIPELINES_HEADER }
+  });
+}
+
+function updateCoupling(heroku, app, stage) {
+  return getCoupling(heroku, app)
+           .then(coupling => patchCoupling(heroku, coupling, stage));
+}
+
 module.exports = {
   topic: 'pipelines',
   command: 'update',
@@ -17,13 +42,11 @@ module.exports = {
       cli.error('Stage must be specified with -s');
       process.exit(1);
     }
-    let promise = heroku.request({
-      method: 'PATCH',
-      path: `/apps/${context.app}/pipeline-couplings`,
-      body: {stage: context.flags.stage},
-      headers: { 'Accept': 'application/vnd.heroku+json; version=3.pipelines' }
-    }); // heroku.apps(app).pipeline-couplings().update(body);
-    let pipeline = yield cli.action(`Changing ${context.app} to ${context.flags.stage}`, promise);
-    cli.hush(pipeline);
+
+    const app   = context.app;
+    const stage = context.flags.stage;
+
+    yield cli.action(`Changing ${app} to ${stage}`,
+                     updateCoupling(heroku, app, stage));
   })
 };
