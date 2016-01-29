@@ -109,6 +109,7 @@ function* diff(targetApp, downstreamApp, githubToken, herokuUserAgent) {
 }
 
 function* run(context, heroku) {
+  // jshint maxstatements:65
   const targetAppName = context.app;
   let coupling;
   try {
@@ -168,7 +169,7 @@ function* run(context, heroku) {
     yield diff(
       targetAppInfo, downstreamAppInfo, githubAccount.github.token, heroku.options.userAgent);
   }
-};
+}
 
 module.exports = {
   topic: 'pipelines',
