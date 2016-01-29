@@ -1,15 +1,15 @@
 'use strict';
 
-let cli   = require('heroku-cli-util');
-let nock  = require('nock');
-let cmd   = require('../../../commands/pipelines/update');
+const cli  = require('heroku-cli-util');
+const nock = require('nock');
+const cmd  = require('../../../commands/pipelines/update');
 
-describe('pipelines:update', function () {
-  beforeEach(function () {
+describe('pipelines:update', () => {
+  beforeEach(() => {
     cli.mockConsole();
   });
 
-  it('displays the right messages', function () {
+  it('displays the right messages', () => {
     const app   = 'example';
     const id    = '0123';
     const stage = 'production';
@@ -24,9 +24,7 @@ describe('pipelines:update', function () {
       .patch(`/pipeline-couplings/${id}`)
       .reply(200, pipeline_coupling);
 
-    return cmd.run({app: app, flags: { stage }})
-    .then(function () {
-      cli.stderr.should.contain(`Changing ${app} to ${stage}... done`);
-    });
+    return cmd.run({ app, flags: { stage } })
+      .then(() => cli.stderr.should.contain(`Changing ${app} to ${stage}... done`));
   });
 });
