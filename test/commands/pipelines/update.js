@@ -5,9 +5,7 @@ const nock = require('nock');
 const cmd  = require('../../../commands/pipelines/update');
 
 describe('pipelines:update', () => {
-  beforeEach(() => {
-    cli.mockConsole();
-  });
+  beforeEach(() => cli.mockConsole());
 
   it('displays the right messages', () => {
     const app   = 'example';
