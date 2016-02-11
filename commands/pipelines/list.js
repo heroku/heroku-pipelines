@@ -5,8 +5,8 @@ let cli = require('heroku-cli-util');
 module.exports = {
   topic: 'pipelines',
   command: 'list',
-  description: 'list pipelines',
-  help: 'List pipelines you have access to.\n\n  Example:\n  $ heroku pipelines:list\n  example\n  sushi',
+  description: 'list pipelines you have access to',
+  help: 'Example:\n  $ heroku pipelines:list\n  example\n  sushi',
   default: true,
   needsAuth: true,
   run: cli.command(function* (context, heroku) {
