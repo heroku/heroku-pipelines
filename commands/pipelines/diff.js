@@ -162,7 +162,8 @@ function* run(context, heroku) {
   // Verify the target app
   let targetAppInfo = appInfo[0];
   if (targetAppInfo.repo === null) {
-    return cli.error(`${targetAppName} does not seem to be connected to GitHub!`);
+    let command = `heroku pipelines:open ${coupling.pipeline.name}`;
+    return cli.error(`${targetAppName} does not seem to be connected to GitHub!\nRun ${cli.color.cyan(command)} and "Connect to GitHub".`);
   } else if (targetAppInfo.hash === null) {
     return cli.error(`No release was found for ${targetAppName}, unable to diff`);
   }
