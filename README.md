@@ -1,7 +1,7 @@
 # Pipelines Plugin for Heroku Toolbelt
 
 [![npm
-version](https://img.shield.io/npm/v/heroku-pipelines.svg)](https://www.npmjs.com/package/heroku-pipelines)
+version](https://img.shields.io/npm/v/heroku-pipelines.svg)](https://www.npmjs.com/package/heroku-pipelines)
 [![build status](https://img.shields.io/circleci/project/heroku/heroku-pipelines.svg)](https://circleci.com/gh/heroku/heroku-pipelines)
 
 A Heroku CLI plugin for [continuous delivery](https://www.heroku.com/continuous-delivery) on Heroku.
