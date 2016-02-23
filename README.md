@@ -10,9 +10,9 @@ This plugin is used to set up a collection of apps sharing a common codebase whe
 
 ## How to install this plugin
 
-This plugin is installed by default with the [Heroku
-Toolbelt](https://toolbelt.heroku.com/). You should no longer need to install
-it yourself. Just update your Toolbelt and plugins:
+This plugin is installed by default with the 
+[Heroku Toolbelt](https://toolbelt.heroku.com/). You do not need to install it 
+yourself. Just update your Toolbelt and plugins:
 
 ```
 $ heroku update
