@@ -4,6 +4,8 @@ const assert = require('assert');
 const cli = require('heroku-cli-util');
 const BBPromise = require('bluebird');
 
+const getPipelineApps = require('../../lib/api').getPipelineApps;
+
 const PROMOTION_ORDER = ["development", "staging", "production"];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
 const PIPELINES_HEADER = V3_HEADER + '.pipelines';
@@ -42,11 +44,7 @@ function* getCoupling(heroku, app) {
 
 function* getApps(heroku, pipeline) {
   return yield cli.action(`Fetching apps from ${pipeline.name}`,
-    heroku.request({
-      method: 'GET',
-      path: `/pipelines/${pipeline.id}/apps`,
-      headers: { 'Accept': PIPELINES_HEADER }
-    }));
+    getPipelineApps(heroku, pipeline.id));
 }
 
 function* promote(heroku, promotionActionName, pipelineId, sourceAppId, targetApps) {
