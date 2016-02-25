@@ -4,11 +4,11 @@ const assert = require('assert');
 const cli = require('heroku-cli-util');
 const BBPromise = require('bluebird');
 
-const getPipelineApps = require('../../lib/api').getPipelineApps;
+const api             = require('../../lib/api');
+const getPipelineApps = api.getPipelineApps;
+const V3_HEADER       = api.V3_HEADER;
 
 const PROMOTION_ORDER = ["development", "staging", "production"];
-const V3_HEADER = 'application/vnd.heroku+json; version=3';
-const PIPELINES_HEADER = V3_HEADER + '.pipelines';
 
 function isComplete(promotionTarget) {
   return promotionTarget.status !== 'pending';

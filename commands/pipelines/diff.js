@@ -5,11 +5,11 @@ const co       = require('co');
 const bluebird = require('bluebird');
 const got      = require('got');
 
-const getPipelineApps = require('../../lib/api').getPipelineApps;
+const api             = require('../../lib/api');
+const getPipelineApps = api.getPipelineApps;
+const V3_HEADER       = api.V3_HEADER;
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
-const V3_HEADER = 'application/vnd.heroku+json; version=3';
-const PIPELINES_HEADER = V3_HEADER + '.pipelines';
 const KOLKRABBI_BASE_URL = 'https://kolkrabbi.heroku.com';
 
 // Helper functions
