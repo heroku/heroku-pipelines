@@ -1,9 +1,11 @@
 'use strict';
 
-let cli      = require('heroku-cli-util');
-let co       = require('co');
-let bluebird = require('bluebird');
-let got      = require('got');
+const cli      = require('heroku-cli-util');
+const co       = require('co');
+const bluebird = require('bluebird');
+const got      = require('got');
+
+const getPipelineApps = require('../../lib/api').getPipelineApps;
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
 const V3_HEADER = 'application/vnd.heroku+json; version=3';
@@ -125,11 +127,7 @@ function* run(context, heroku) {
   const targetAppId = coupling.app.id;
 
   const allApps = yield cli.action(`Fetching apps from pipeline`,
-    heroku.request({
-      method: 'GET',
-      path: `/pipelines/${coupling.pipeline.id}/apps`,
-      headers: { 'Accept': PIPELINES_HEADER }
-    }));
+    getPipelineApps(heroku, coupling.pipeline.id));
 
   const sourceStage = coupling.stage;
   const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];
