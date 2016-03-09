@@ -5,7 +5,7 @@ const cli = require('heroku-cli-util');
 const BBPromise = require('bluebird');
 
 const api             = require('../../lib/api');
-const getPipelineApps = api.getPipelineApps;
+const listPipelineApps = api.listPipelineApps;
 const V3_HEADER       = api.V3_HEADER;
 
 const PROMOTION_ORDER = ["development", "staging", "production"];
@@ -44,7 +44,7 @@ function* getCoupling(heroku, app) {
 
 function* getApps(heroku, pipeline) {
   return yield cli.action(`Fetching apps from ${pipeline.name}`,
-    getPipelineApps(heroku, pipeline.id));
+    listPipelineApps(heroku, pipeline.id));
 }
 
 function* promote(heroku, promotionActionName, pipelineId, sourceAppId, targetApps) {

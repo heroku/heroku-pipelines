@@ -6,7 +6,7 @@ const bluebird = require('bluebird');
 const got      = require('got');
 
 const api             = require('../../lib/api');
-const getPipelineApps = api.getPipelineApps;
+const listPipelineApps = api.listPipelineApps;
 const V3_HEADER       = api.V3_HEADER;
 
 const PROMOTION_ORDER = ['development', 'staging', 'production'];
@@ -127,7 +127,7 @@ function* run(context, heroku) {
   const targetAppId = coupling.app.id;
 
   const allApps = yield cli.action(`Fetching apps from pipeline`,
-    getPipelineApps(heroku, coupling.pipeline.id));
+    listPipelineApps(heroku, coupling.pipeline.id));
 
   const sourceStage = coupling.stage;
   const downstreamStage = PROMOTION_ORDER[PROMOTION_ORDER.indexOf(sourceStage) + 1];

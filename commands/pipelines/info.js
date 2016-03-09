@@ -3,7 +3,7 @@
 const cli             = require('heroku-cli-util');
 const disambiguate    = require('../../lib/disambiguate');
 const stageNames      = require('../../lib/stages').names;
-const getPipelineApps = require('../../lib/api').getPipelineApps;
+const listPipelineApps = require('../../lib/api').listPipelineApps;
 
 module.exports = {
   topic: 'pipelines',
@@ -17,7 +17,7 @@ module.exports = {
   run: cli.command(function* (context, heroku) {
     const pipeline = yield disambiguate(heroku, context.args.pipeline);
 
-    const apps = yield getPipelineApps(heroku, pipeline.id);
+    const apps = yield listPipelineApps(heroku, pipeline.id);
 
     cli.styledHeader(pipeline.name);
     // Sort Apps by stage, name
