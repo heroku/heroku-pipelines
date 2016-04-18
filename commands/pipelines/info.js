@@ -2,7 +2,7 @@
 
 const cli             = require('heroku-cli-util');
 const disambiguate    = require('../../lib/disambiguate');
-const stageNames      = require('../../lib/stages').names;
+const stageNames      = require('../../lib/stages').allStageNames;
 const listPipelineApps = require('../../lib/api').listPipelineApps;
 
 module.exports = {
