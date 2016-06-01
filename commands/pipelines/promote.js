@@ -23,6 +23,13 @@ function isFailed(promotionTarget) {
   return promotionTarget.status === 'failed';
 }
 
+function * getSecondFactor() {
+  cli.yubikey.enable();
+  const secondFactor = yield cli.prompt('Two-factor code', { mask: true });
+  cli.yubikey.disable();
+  return secondFactor;
+}
+
 function pollPromotionStatus(heroku, id) {
   return heroku.request({
     method: 'GET',
@@ -48,17 +55,31 @@ function* getApps(heroku, pipeline) {
     listPipelineApps(heroku, pipeline.id));
 }
 
-function* promote(heroku, promotionActionName, pipelineId, sourceAppId, targetApps) {
-  return yield cli.action(promotionActionName, heroku.request({
-    method: 'POST',
-    path: `/pipeline-promotions`,
-    headers: { 'Accept': V3_HEADER, },
-    body: {
-      pipeline: { id: pipelineId },
-      source:   { app: { id: sourceAppId } },
-      targets:  targetApps.map(function(app) { return { app: { id: app.id } }; })
+function* promote(heroku, label, id, sourceAppId, targetApps, secondFactor) {
+  const headers = { 'Accept': V3_HEADER };
+
+  if (secondFactor) {
+    headers['Heroku-Two-Factor-Code'] = secondFactor;
+  }
+
+  try {
+    return yield cli.action(label, heroku.request({
+      method: 'POST',
+      path: `/pipeline-promotions`,
+      headers: headers,
+      body: {
+        pipeline: { id: id },
+        source:   { app: { id: sourceAppId } },
+        targets:  targetApps.map((app) => { return { app: { id: app.id } }; })
+      }
+    }));
+  } catch(error) {
+    if (error.body.id !== "two_factor") {
+      throw error;
     }
-  }));
+    const secondFactor = yield getSecondFactor();
+    return yield promote(heroku, label, id, sourceAppId, targetApps, secondFactor);
+  }
 }
 
 function assertNotPromotingToSelf(source, target) {
