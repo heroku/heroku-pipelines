@@ -2,7 +2,7 @@
   "name": "heroku-pipelines",
   "description": "pipelines heroku plugin",
   "version": "1.1.8",
-  "author": "Mark Pundsack @markpundsack",
+  "author": "Heroku Developer Experience team",
   "repository": "heroku/heroku-pipelines",
   "bugs": {
     "url": "https://github.com/heroku/heroku-pipelines/issues"
@@ -23,6 +23,7 @@
   "dependencies": {
     "bluebird": "3.3.4",
     "co": "4.6.0",
+    "got": "^6.7.1",
     "heroku-cli-util": "6.0.11",
     "inflection": "1.8.0",
     "inquirer": "0.12.0",
