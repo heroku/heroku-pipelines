@@ -1,54 +1,23 @@
-'use strict'
-
 const cli = require('heroku-cli-util')
 const co = require('co')
 const api = require('../../lib/api')
 const kolkrabbi = require('../../lib/kolkrabbi-api')
 const github = require('../../lib/github-api')
 const prompt = require('../../lib/prompt')
+const REPO_REGEX = /.+\/.+/
 
-function* getPipelineName (context) {
-  return context.args.name || (yield prompt([
-    {
-      type: 'input',
-      name: 'name',
-      message: 'Pipeline name'
-    }
-  ])).name
-}
-
-function* getRepoName (context) {
-  return context.args.repo || (yield prompt([
-    {
-      type: 'input',
-      name: 'repo',
-      message: 'GitHub repository to connect to (e.g. rails/rails)'
-    }
-  ])).repo
-}
-
-function* getGithubAccount (token) {
-  let githubAccount
-
-  try {
-    githubAccount = yield kolkrabbi.getAccount(token)
-  } catch (error) {
-    // TODO: Allow user to conect here
+function getGitHubToken (token) {
+  return kolkrabbi.getAccount(token).then((account) => {
+    return account.github.token
+  }, () => {
     throw new Error('Account not connected to GitHub.')
-  }
-  return githubAccount
+  })
 }
 
-function* getRepo (name, token) {
-  let repo
-
-  try {
-    repo = yield github.getRepo(name, token)
-  } catch (error) {
-    throw new Error(`Could not access ${name}`)
-  }
-
-  return repo
+function getRepo (token, name) {
+  return github.getRepo(token, name).catch(() => {
+    throw new Error(`Could not access the ${name} repo`)
+  })
 }
 
 function createApp (heroku, archiveURL, name, pipeline, stage) {
@@ -60,6 +29,26 @@ function createApp (heroku, archiveURL, name, pipeline, stage) {
       return setup.app
     })
   })
+}
+
+function* getNameAndRepo (args) {
+  const answers = yield prompt([{
+    type: 'input',
+    name: 'name',
+    message: 'Pipeline name',
+    when () { return !args.name }
+  }, {
+    type: 'input',
+    name: 'repo',
+    message: 'GitHub repository to connect to (e.g. rails/rails)',
+    when () { return !args.repo },
+    validate (input) {
+      if (input.match(REPO_REGEX)) return true
+      return 'Must be in the format organization/rep  o'
+    }
+  }])
+
+  return Object.assign(answers, args)
 }
 
 function* getSettings (branch) {
@@ -117,37 +106,44 @@ module.exports = {
     }
   ],
   run: cli.command(co.wrap(function*(context, heroku) {
-    // TODO: Allow -o flag
-    const pipelineName = yield getPipelineName(context)
-    const repoName = yield getRepoName(context)
-    const githubAccount = yield getGithubAccount(heroku.options.token)
-    const githubToken = githubAccount.github.token
-    const repo = yield getRepo(githubToken, repoName)
+    // TODO:
+    //   - Allow -o flag
+    //   - Enable CI
+    //
+    const herokuToken = heroku.options.token
+    const githubToken = yield getGitHubToken(herokuToken)
 
-    const pipeline = yield cli.action('Creating pipeline', api.createPipeline(heroku, pipelineName))
+    const { name: pipelineName, repo: repoName } = yield getNameAndRepo(context.args)
+    const repo = yield getRepo(githubToken, repoName)
+    const settings = yield getSettings(repo.default_branch)
+
+    const pipeline = yield cli.action(
+      'Creating pipeline',
+      api.createPipeline(heroku, pipelineName)
+    )
+
     yield cli.action(
       'Linking to repo',
-      kolkrabbi.createPipelineRepository(heroku.options.token, pipeline.id, repo.id)
+      kolkrabbi.createPipelineRepository(herokuToken, pipeline.id, repo.id)
     )
+
     const archiveURL = yield github.getArchiveURL(githubToken, repoName, repo.default_branch)
 
     yield cli.action(
       'Creating production app',
       createApp(heroku, archiveURL, pipelineName, pipeline, 'production')
     )
+
     const stagingApp = yield cli.action(
       'Creating staging app',
       createApp(heroku, archiveURL, `${pipelineName}-staging`, pipeline, 'staging')
     )
 
-    const settings = yield getSettings(repo.default_branch)
     yield cli.action(
       'Configuring pipeline',
-      setupPipeline(heroku.options.token, stagingApp.id, settings)
+      setupPipeline(herokuToken, stagingApp.id, settings)
     )
 
-    // TODO: enable CI
-
-    cli.log(`Done. Your new pipeline can be viewed at https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+    cli.log(`View your new pipeline at https://dashboard.heroku.com/pipelines/${pipeline.id}`)
   }))
 }
