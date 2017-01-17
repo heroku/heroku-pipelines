@@ -130,13 +130,14 @@ module.exports = {
     const archiveURL = yield github.getArchiveURL(githubToken, repoName, repo.default_branch)
 
     yield cli.action(
-      'Creating production app',
+      `Creating ${cli.color.app(pipelineName)} (production app)`,
       createApp(heroku, archiveURL, pipelineName, pipeline, 'production')
     )
 
+    const stagingAppName = `${pipelineName}-staging`
     const stagingApp = yield cli.action(
-      'Creating staging app',
-      createApp(heroku, archiveURL, `${pipelineName}-staging`, pipeline, 'staging')
+      `Creating ${cli.color.app(stagingAppName)} (staging app)`,
+      createApp(heroku, archiveURL, stagingAppName, pipeline, 'staging')
     )
 
     yield cli.action(
