@@ -8,10 +8,12 @@ const cmd = require('../../../commands/pipelines/setup')
 describe('pipelines:setup', function () {
   beforeEach(function () {
     cli.mockConsole()
+    sinon.stub(cli, 'open').returns(Promise.resolve())
   })
 
   afterEach(function () {
     nock.cleanAll()
+    cli.open.restore()
   })
 
   it('errors if the user is not linked to GitHub', function * () {
