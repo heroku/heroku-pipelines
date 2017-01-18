@@ -20,11 +20,19 @@ function getRepo (token, name) {
   })
 }
 
-function createApp (heroku, archiveURL, name, pipeline, stage) {
-  return api.createAppSetup(heroku, {
+function createApp (heroku, { archiveURL, name, organization, pipeline, stage }) {
+  const params = {
     source_blob: { url: archiveURL },
     app: { name }
-  }).then((setup) => {
+  }
+
+  if (organization) {
+    params.app.organization = organization
+  } else {
+    params.app.personal = true
+  }
+
+  return api.createAppSetup(heroku, params).then((setup) => {
     return api.postCoupling(heroku, pipeline.id, setup.app.id, stage).then(() => {
       return setup.app
     })
@@ -105,9 +113,16 @@ module.exports = {
       optional: true
     }
   ],
+  flags: [
+    {
+      name: 'organization',
+      char: 'o',
+      description: 'the organization or team which will own the apps',
+      hasValue: true
+    }
+  ],
   run: cli.command(co.wrap(function*(context, heroku) {
     // TODO:
-    //   - Allow -o flag
     //   - Enable CI
     //
     const herokuToken = heroku.options.token
@@ -131,13 +146,25 @@ module.exports = {
 
     yield cli.action(
       `Creating ${cli.color.app(pipelineName)} (production app)`,
-      createApp(heroku, archiveURL, pipelineName, pipeline, 'production')
+      createApp(heroku, {
+        archiveURL,
+        pipeline,
+        name: pipelineName,
+        stage: 'production',
+        organization: context.flags.organization
+      })
     )
 
     const stagingAppName = `${pipelineName}-staging`
     const stagingApp = yield cli.action(
       `Creating ${cli.color.app(stagingAppName)} (staging app)`,
-      createApp(heroku, archiveURL, stagingAppName, pipeline, 'staging')
+      createApp(heroku, {
+        archiveURL,
+        pipeline,
+        name: stagingAppName,
+        stage: 'staging',
+        organization: context.flags.organization
+      })
     )
 
     yield cli.action(

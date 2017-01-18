@@ -16,7 +16,7 @@ describe('pipelines:setup', function () {
 
   it('errors if the user is not linked to GitHub', function * () {
     try {
-      yield cmd.run({ args: {} })
+      yield cmd.run({ args: {}, flags: {} })
     } catch (error) {
       expect(error.message).to.equal('Account not connected to GitHub.')
     }
@@ -66,16 +66,6 @@ describe('pipelines:setup', function () {
       api = nock('https://api.heroku.com')
       api.post('/pipelines').reply(201, pipeline)
 
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: prodApp.name }
-      }).reply(201, { app: prodApp })
-
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: stagingApp.name }
-      }).reply(201, { app: stagingApp })
-
       api.post('/pipeline-couplings', {
         pipeline: pipeline.id,
         app: prodApp.id,
@@ -98,8 +88,40 @@ describe('pipelines:setup', function () {
       inquirer.prompt.restore()
     })
 
-    it('runs', function* () {
-      yield cmd.run({ args: {} })
+    it('creates apps in a personal account', function* () {
+      api.post('/app-setups', {
+        source_blob: { url: archiveURL },
+        app: { name: prodApp.name, personal: true }
+      }).reply(201, { app: prodApp })
+
+      api.post('/app-setups', {
+        source_blob: { url: archiveURL },
+        app: { name: stagingApp.name, personal: true }
+      }).reply(201, { app: stagingApp })
+
+      yield cmd.run({ args: {}, flags: {} })
+
+      expect(cli.stdout).to.include(`heroku pipelines:open ${pipeline.id}`)
+
+      api.done()
+      github.done()
+      kolkrabbi.done()
+    })
+
+    it('creates apps in an organization', function* () {
+      const organization = 'heroku-test-org'
+
+      api.post('/app-setups', {
+        source_blob: { url: archiveURL },
+        app: { name: prodApp.name, organization }
+      }).reply(201, { app: prodApp })
+
+      api.post('/app-setups', {
+        source_blob: { url: archiveURL },
+        app: { name: stagingApp.name, organization }
+      }).reply(201, { app: stagingApp })
+
+      yield cmd.run({ args: {}, flags: { organization } })
 
       expect(cli.stdout).to.include(`heroku pipelines:open ${pipeline.id}`)
 
