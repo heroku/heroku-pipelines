@@ -18,7 +18,13 @@
     "postversion": "npm publish && git push && git push --tags"
   },
   "standard": {
-    "globals": [ "describe", "context", "beforeEach", "afterEach", "it" ]
+    "globals": [
+      "describe",
+      "context",
+      "beforeEach",
+      "afterEach",
+      "it"
+    ]
   },
   "dependencies": {
     "bluebird": "3.3.4",
@@ -32,10 +38,12 @@
   },
   "devDependencies": {
     "chai": "^3.0.0",
+    "co-mocha": "^1.1.3",
     "mocha": "^2.2.5",
     "nock": "8.0.0",
     "nyc": "6.4.4",
     "sinon": "^1.15.3",
+    "sinon-as-promised": "^4.0.2",
     "sinon-chai": "^2.8.0",
     "standard": "^8.6.0"
   }

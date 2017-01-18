@@ -145,6 +145,6 @@ module.exports = {
       setupPipeline(herokuToken, stagingApp.id, settings)
     )
 
-    cli.log(`View your new pipeline at https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+    cli.log(`View your new pipeline by running \`heroku pipelines:open ${pipeline.id}\``)
   }))
 }
