@@ -86,8 +86,40 @@ function* getSettings (branch) {
   }])
 }
 
-function setupPipeline (token, app, settings) {
-  return kolkrabbi.updateAppLink(token, app, settings).then((appLink) => {
+function* hasCIFlag (heroku) {
+  let hasFlag
+  try {
+    hasFlag = (yield api.getAccountFeature(heroku, 'ci')).enabled
+  } catch (error) {
+    hasFlag = false
+  }
+  return hasFlag
+}
+
+function* getCISettings (organization) {
+  const settings = yield prompt([{
+    type: 'confirm',
+    name: 'ci',
+    message: 'Enable automatic Heroku CI test runs?'
+  }])
+
+  if (settings.ci && organization) {
+    settings.organization = organization
+  }
+
+  return settings
+}
+
+function setupPipeline (token, app, settings, pipelineID, ciSettings = {}) {
+  const promises = [kolkrabbi.updateAppLink(token, app, settings)]
+
+  if (ciSettings.ci) {
+    promises.push(
+      kolkrabbi.updatePipelineRepository(token, pipelineID, ciSettings)
+    )
+  }
+
+  return Promise.all(promises).then(([appLink]) => {
     return appLink
   }, (error) => {
     cli.error(error.response.body.message)
@@ -132,6 +164,11 @@ module.exports = {
     const repo = yield getRepo(githubToken, repoName)
     const settings = yield getSettings(repo.default_branch)
 
+    let ciSettings
+    if (yield hasCIFlag(heroku)) {
+      ciSettings = yield getCISettings(context.flags.organization)
+    }
+
     const pipeline = yield cli.action(
       'Creating pipeline',
       api.createPipeline(heroku, pipelineName)
@@ -169,7 +206,7 @@ module.exports = {
 
     yield cli.action(
       'Configuring pipeline',
-      setupPipeline(herokuToken, stagingApp.id, settings)
+      setupPipeline(herokuToken, stagingApp.id, settings, pipeline.id, ciSettings)
     )
 
     cli.log(`View your new pipeline by running \`heroku pipelines:open ${pipeline.id}\``)

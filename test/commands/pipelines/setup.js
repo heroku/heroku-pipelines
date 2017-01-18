@@ -80,7 +80,8 @@ describe('pipelines:setup', function () {
 
       sinon.stub(inquirer, 'prompt').resolves({
         name: pipeline.name,
-        repo: repo.name
+        repo: repo.name,
+        ci: true
       })
     })
 
@@ -88,46 +89,79 @@ describe('pipelines:setup', function () {
       inquirer.prompt.restore()
     })
 
-    it('creates apps in a personal account', function* () {
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: prodApp.name, personal: true }
-      }).reply(201, { app: prodApp })
+    context('in a personal account', function () {
+      beforeEach(function () {
+        api.post('/app-setups', {
+          source_blob: { url: archiveURL },
+          app: { name: prodApp.name, personal: true }
+        }).reply(201, { app: prodApp })
 
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: stagingApp.name, personal: true }
-      }).reply(201, { app: stagingApp })
+        api.post('/app-setups', {
+          source_blob: { url: archiveURL },
+          app: { name: stagingApp.name, personal: true }
+        }).reply(201, { app: stagingApp })
+      })
 
-      yield cmd.run({ args: {}, flags: {} })
+      it('creates apps in the personal account', function* () {
+        yield cmd.run({ args: {}, flags: {} })
 
-      expect(cli.stdout).to.include(`heroku pipelines:open ${pipeline.id}`)
+        api.done()
+        github.done()
+        kolkrabbi.done()
+      })
 
-      api.done()
-      github.done()
-      kolkrabbi.done()
+      it('enables ci if the user is flagged in', function* () {
+        api.get('/account/features/ci').reply(200, { enabled: true })
+        kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, {
+          ci: true
+        }).reply(200)
+
+        yield cmd.run({ args: {}, flags: {} })
+
+        api.done()
+        github.done()
+        kolkrabbi.done()
+      })
     })
 
-    it('creates apps in an organization', function* () {
-      const organization = 'heroku-test-org'
+    context('in an organization', function () {
+      let organization
 
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: prodApp.name, organization }
-      }).reply(201, { app: prodApp })
+      beforeEach(function () {
+        organization = 'test-org'
 
-      api.post('/app-setups', {
-        source_blob: { url: archiveURL },
-        app: { name: stagingApp.name, organization }
-      }).reply(201, { app: stagingApp })
+        api.post('/app-setups', {
+          source_blob: { url: archiveURL },
+          app: { name: prodApp.name, organization }
+        }).reply(201, { app: prodApp })
 
-      yield cmd.run({ args: {}, flags: { organization } })
+        api.post('/app-setups', {
+          source_blob: { url: archiveURL },
+          app: { name: stagingApp.name, organization }
+        }).reply(201, { app: stagingApp })
+      })
 
-      expect(cli.stdout).to.include(`heroku pipelines:open ${pipeline.id}`)
+      it('creates apps in an organization', function* () {
+        yield cmd.run({ args: {}, flags: { organization } })
 
-      api.done()
-      github.done()
-      kolkrabbi.done()
+        api.done()
+        github.done()
+        kolkrabbi.done()
+      })
+
+      it('enables ci billed to the org if the user is flagged in', function* () {
+        api.get('/account/features/ci').reply(200, { enabled: true })
+        kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, {
+          ci: true,
+          organization
+        }).reply(200)
+
+        yield cmd.run({ args: {}, flags: { organization } })
+
+        api.done()
+        github.done()
+        kolkrabbi.done()
+      })
     })
   })
 })
