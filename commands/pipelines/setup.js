@@ -130,7 +130,20 @@ module.exports = {
   topic: 'pipelines',
   command: 'setup',
   description: 'bootstrap a new pipeline with common settings',
-  help: 'create a new pipeline and set up common features such as review apps',
+  help: `Example:
+
+  heroku pipelines:setup example githuborg/reponame -o example-org
+  ? Automatically deploy the master branch to staging? Yes
+  ? Wait for CI to pass before deploying the master branch to staging? Yes
+  ? Enable review apps? Yes
+  ? Automatically create review apps for every PR? Yes
+  ? Automatically destroy idle review apps after 5 days? Yes
+  Creating pipeline... done
+  Linking to repo... done
+  Creating ⬢ example (production app)... done
+  Creating ⬢ example-staging (staging app)... done
+  Configuring pipeline... done
+  View your new pipeline by running \`heroku pipelines:open e5a55ffa-de3f-11e6-a245-3c15c2e6bc1e\``,
   needsApp: false,
   needsAuth: true,
   args: [
@@ -149,16 +162,20 @@ module.exports = {
     {
       name: 'organization',
       char: 'o',
-      description: 'the organization or team which will own the apps',
+      description: 'the organization which will own the apps (aliased as --team)',
+      hasValue: true
+    },
+    {
+      name: 'team',
+      char: 't',
+      description: 'the team which will own the apps (aliased as --organization)',
       hasValue: true
     }
   ],
   run: cli.command(co.wrap(function*(context, heroku) {
-    // TODO:
-    //   - Enable CI
-    //
     const herokuToken = heroku.options.token
     const githubToken = yield getGitHubToken(herokuToken)
+    const organization = context.flags.organization || context.flags.team
 
     const { name: pipelineName, repo: repoName } = yield getNameAndRepo(context.args)
     const repo = yield getRepo(githubToken, repoName)
@@ -166,7 +183,7 @@ module.exports = {
 
     let ciSettings
     if (yield hasCIFlag(heroku)) {
-      ciSettings = yield getCISettings(context.flags.organization)
+      ciSettings = yield getCISettings(organization)
     }
 
     const pipeline = yield cli.action(
@@ -188,7 +205,7 @@ module.exports = {
         pipeline,
         name: pipelineName,
         stage: 'production',
-        organization: context.flags.organization
+        organization
       })
     )
 
@@ -200,7 +217,7 @@ module.exports = {
         pipeline,
         name: stagingAppName,
         stage: 'staging',
-        organization: context.flags.organization
+        organization
       })
     )
 
