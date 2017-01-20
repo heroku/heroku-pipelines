@@ -1,21 +1,21 @@
 const cli = require('heroku-cli-util')
 const co = require('co')
 const api = require('../../lib/api')
-const kolkrabbi = require('../../lib/kolkrabbi-api')
-const github = require('../../lib/github-api')
+const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
+const GitHubAPI = require('../../lib/github-api')
 const prompt = require('../../lib/prompt')
 const REPO_REGEX = /.+\/.+/
 
-function getGitHubToken (token) {
-  return kolkrabbi.getAccount(token).then((account) => {
+function getGitHubToken (kolkrabbi) {
+  return kolkrabbi.getAccount().then((account) => {
     return account.github.token
   }, () => {
     throw new Error('Account not connected to GitHub.')
   })
 }
 
-function getRepo (token, name) {
-  return github.getRepo(token, name).catch(() => {
+function getRepo (github, name) {
+  return github.getRepo(name).catch(() => {
     throw new Error(`Could not access the ${name} repo`)
   })
 }
@@ -110,12 +110,12 @@ function* getCISettings (organization) {
   return settings
 }
 
-function setupPipeline (token, app, settings, pipelineID, ciSettings = {}) {
-  const promises = [kolkrabbi.updateAppLink(token, app, settings)]
+function setupPipeline (kolkrabbi, app, settings, pipelineID, ciSettings = {}) {
+  const promises = [kolkrabbi.updateAppLink(app, settings)]
 
   if (ciSettings.ci) {
     promises.push(
-      kolkrabbi.updatePipelineRepository(token, pipelineID, ciSettings)
+      kolkrabbi.updatePipelineRepository(pipelineID, ciSettings)
     )
   }
 
@@ -173,12 +173,12 @@ module.exports = {
     }
   ],
   run: cli.command(co.wrap(function*(context, heroku) {
-    const herokuToken = heroku.options.token
-    const githubToken = yield getGitHubToken(herokuToken)
-    const organization = context.flags.organization || context.flags.team
+    const kolkrabbi = new KolkrabbiAPI(context.version, heroku.options.token)
+    const github = new GitHubAPI(context.version, yield getGitHubToken(kolkrabbi))
 
+    const organization = context.flags.organization || context.flags.team
     const { name: pipelineName, repo: repoName } = yield getNameAndRepo(context.args)
-    const repo = yield getRepo(githubToken, repoName)
+    const repo = yield getRepo(github, repoName)
     const settings = yield getSettings(repo.default_branch)
 
     let ciSettings
@@ -193,10 +193,10 @@ module.exports = {
 
     yield cli.action(
       'Linking to repo',
-      kolkrabbi.createPipelineRepository(herokuToken, pipeline.id, repo.id)
+      kolkrabbi.createPipelineRepository(pipeline.id, repo.id)
     )
 
-    const archiveURL = yield github.getArchiveURL(githubToken, repoName, repo.default_branch)
+    const archiveURL = yield github.getArchiveURL(repoName, repo.default_branch)
 
     yield cli.action(
       `Creating ${cli.color.app(pipelineName)} (production app)`,
@@ -223,7 +223,7 @@ module.exports = {
 
     yield cli.action(
       'Configuring pipeline',
-      setupPipeline(herokuToken, stagingApp.id, settings, pipeline.id, ciSettings)
+      setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
     )
 
     yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
