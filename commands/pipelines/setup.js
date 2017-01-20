@@ -129,7 +129,7 @@ function setupPipeline (token, app, settings, pipelineID, ciSettings = {}) {
 module.exports = {
   topic: 'pipelines',
   command: 'setup',
-  description: 'bootstrap a new pipeline with common settings',
+  description: 'bootstrap a new pipeline with common settings and create a production and staging app (requires a fully formed app.json in the repo)',
   help: `Example:
 
   heroku pipelines:setup example githuborg/reponame -o example-org
@@ -162,13 +162,13 @@ module.exports = {
     {
       name: 'organization',
       char: 'o',
-      description: 'the organization which will own the apps (aliased as --team)',
+      description: 'the organization which will own the apps (can also use --team)',
       hasValue: true
     },
     {
       name: 'team',
       char: 't',
-      description: 'the team which will own the apps (aliased as --organization)',
+      description: 'the team which will own the apps (can also use --organization)',
       hasValue: true
     }
   ],
