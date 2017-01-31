@@ -56,7 +56,10 @@ function* getNameAndRepo (args) {
     }
   }])
 
-  return Object.assign(answers, args)
+  const reply = Object.assign(answers, args)
+  reply.name = reply.name.toLowerCase()
+
+  return reply
 }
 
 function* getSettings (branch) {
