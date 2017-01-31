@@ -126,14 +126,12 @@ describe('pipelines:setup', function () {
       })
 
       it('downcases capitalised pipeline names', function* () {
-        yield cmd.run({ args: {
-          name: pipeline.name.toUpperCase()
-        }, flags: {} })
+        yield cmd.run({ args: { name: pipeline.name.toUpperCase() }, flags: {} })
 
         api.done()
         github.done()
         kolkrabbi.done()
-      });
+      })
     })
 
     context('in an organization', function () {
