@@ -57,7 +57,7 @@ function* getNameAndRepo (args) {
   }])
 
   const reply = Object.assign(answers, args)
-  reply.name = reply.name.toLowerCase()
+  reply.name = reply.name.toLowerCase().replace(/\s/g, '-')
 
   return reply
 }
