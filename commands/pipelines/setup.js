@@ -4,8 +4,35 @@ const api = require('../../lib/api')
 const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
 const GitHubAPI = require('../../lib/github-api')
 const prompt = require('../../lib/prompt')
+
 const REPO_REGEX = /.+\/.+/
 const STAGING_APP_INDICATOR = '-staging'
+const PIPELINE_MIN_LENGTH = 2
+const PIPELINE_MAX_LENGTH = 30 - STAGING_APP_INDICATOR.length
+const ERR_PIPELINE_NAME_LENGTH = `Please choose a pipeline name between 2 and ${PIPELINE_MAX_LENGTH} characters long`
+const ERR_REPO_FORMAT = 'Repository name must be in the format organization/repo'
+
+function validate ({ name, repo }) {
+  const errors = []
+  const [nameIsValid, nameMsg] = validateName(name || '')
+  const [repoIsValid, repoMsg] = validateRepo(repo || '')
+
+  if (name && !nameIsValid) errors.push(nameMsg)
+  if (repo && !repoIsValid) errors.push(repoMsg)
+
+  return errors
+}
+
+function validateName (name) {
+  const isValid = name.length >= PIPELINE_MIN_LENGTH &&
+                  name.length <= PIPELINE_MAX_LENGTH
+  return isValid ? [isValid] : [isValid, ERR_PIPELINE_NAME_LENGTH]
+}
+
+function validateRepo (repo) {
+  const isValid = !!repo.match(REPO_REGEX)
+  return isValid ? [isValid] : [isValid, ERR_REPO_FORMAT]
+}
 
 function getGitHubToken (kolkrabbi) {
   return kolkrabbi.getAccount().then((account) => {
@@ -40,33 +67,31 @@ function createApp (heroku, { archiveURL, name, organization, pipeline, stage })
   })
 }
 
-function* getPipelineName (args) {
+function* getNameAndRepo (args) {
   const answer = yield prompt([{
     type: 'input',
     name: 'name',
     message: 'Pipeline name',
-    when () { return !args.name }
+    when () { return !args.name },
+    validate (input) {
+      const [valid, msg] = validateName(input)
+      return valid || msg
+    }
+  }, {
+    type: 'input',
+    name: 'repo',
+    message: 'GitHub repository to connect to (e.g. rails/rails)',
+    when () { return !args.repo },
+    validate (input) {
+      const [valid, msg] = validateRepo(input)
+      return valid || msg
+    }
   }])
 
   const reply = Object.assign(answer, args)
   reply.name = reply.name.toLowerCase().replace(/\s/g, '-')
 
   return reply
-}
-
-function* getRepoName (args) {
-  const answer = yield prompt([{
-    type: 'input',
-    name: 'repo',
-    message: 'GitHub repository to connect to (e.g. rails/rails)',
-    when () { return !args.repo },
-    validate (input) {
-      if (input.match(REPO_REGEX)) return true
-      return 'Must be in the format organization/repo'
-    }
-  }])
-
-  return Object.assign(answer, args)
 }
 
 function* getSettings (branch) {
@@ -183,65 +208,66 @@ module.exports = {
     }
   ],
   run: cli.command(co.wrap(function*(context, heroku) {
+    const errors = validate(context.args)
+
+    if (errors.length) {
+      cli.error(errors.join(', '))
+      return
+    }
+
     const kolkrabbi = new KolkrabbiAPI(context.version, heroku.options.token)
     const github = new GitHubAPI(context.version, yield getGitHubToken(kolkrabbi))
 
     const organization = context.flags.organization || context.flags.team
-    const { name: pipelineName } = yield getPipelineName(context.args)
+    const { name: pipelineName, repo: repoName } = yield getNameAndRepo(context.args)
     const stagingAppName = pipelineName + STAGING_APP_INDICATOR
+    const repo = yield getRepo(github, repoName)
+    const settings = yield getSettings(repo.default_branch)
 
-    if (stagingAppName.length > 30) {
-      cli.error(`${pipelineName} is too long.\nPlease, choose a pipeline name shorter than ${30 - STAGING_APP_INDICATOR.length} characters.`)
-    } else {
-      const { repo: repoName } = yield getRepoName(context.args)
-      const repo = yield getRepo(github, repoName)
-      const settings = yield getSettings(repo.default_branch)
-
-      let ciSettings
-      if (yield hasCIFlag(heroku)) {
-        ciSettings = yield getCISettings(organization)
-      }
-
-      const pipeline = yield cli.action(
-        'Creating pipeline',
-        api.createPipeline(heroku, pipelineName)
-      )
-
-      yield cli.action(
-        'Linking to repo',
-        kolkrabbi.createPipelineRepository(pipeline.id, repo.id)
-      )
-
-      const archiveURL = yield github.getArchiveURL(repoName, repo.default_branch)
-
-      yield cli.action(
-        `Creating ${cli.color.app(pipelineName)} (production app)`,
-        createApp(heroku, {
-          archiveURL,
-          pipeline,
-          name: pipelineName,
-          stage: 'production',
-          organization
-        })
-      )
-
-      const stagingApp = yield cli.action(
-        `Creating ${cli.color.app(stagingAppName)} (staging app)`,
-        createApp(heroku, {
-          archiveURL,
-          pipeline,
-          name: stagingAppName,
-          stage: 'staging',
-          organization
-        })
-      )
-
-      yield cli.action(
-        'Configuring pipeline',
-        setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
-      )
-
-      yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+    let ciSettings
+    if (yield hasCIFlag(heroku)) {
+      ciSettings = yield getCISettings(organization)
     }
+
+    const pipeline = yield cli.action(
+      'Creating pipeline',
+      api.createPipeline(heroku, pipelineName)
+    )
+
+    yield cli.action(
+      'Linking to repo',
+      kolkrabbi.createPipelineRepository(pipeline.id, repo.id)
+    )
+
+    const archiveURL = yield github.getArchiveURL(repoName, repo.default_branch)
+
+    yield cli.action(
+      `Creating ${cli.color.app(pipelineName)} (production app)`,
+      createApp(heroku, {
+        archiveURL,
+        pipeline,
+        name: pipelineName,
+        stage: 'production',
+        organization
+      })
+    )
+
+    const stagingApp = yield cli.action(
+      `Creating ${cli.color.app(stagingAppName)} (staging app)`,
+      createApp(heroku, {
+        archiveURL,
+        pipeline,
+        name: stagingAppName,
+        stage: 'staging',
+        organization
+      })
+    )
+
+    yield cli.action(
+      'Configuring pipeline',
+      setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
+    )
+
+    yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
   }))
 }

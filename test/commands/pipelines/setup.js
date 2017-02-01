@@ -71,12 +71,17 @@ describe('pipelines:setup', function () {
       inquirer.prompt.restore()
     })
 
-    context('and pipeline name is too long', function () {
-      it('shows a warning if pipeline name is too long', function *() {
-        return cmd.run({ app: 'myapp', args: { name: 'super-cali-fragilistic-expialidocious' }, flags: {} })
-            .then(() => expect('').to.eq(cli.stdout))
-            .then(() => expect(' ▸    super-cali-fragilistic-expialidocious is too long.\n ▸    Please, choose a pipeline name shorter than 22 characters.\n').to.eq(cli.stderr))
-            .then(() => github.done())
+    context('when pipeline name is too long', function () {
+      it('shows a warning', function* () {
+        yield cmd.run({
+          app: 'myapp',
+          args: {
+            name: 'super-cali-fragilistic-expialidocious'
+          },
+          flags: {}
+        })
+        expect(cli.stdout).to.eq('')
+        expect(cli.stderr).to.include('Please choose a pipeline name between 2 and 22 characters')
       })
     })
 
