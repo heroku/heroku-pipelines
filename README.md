@@ -134,5 +134,6 @@ Opening dashboard... done
 ### TODO
 
 * `heroku pipelines:status [-a APP | -r REMOTE]`
+* `heroku pipelines:deploy [-a APP | -b branch]`
 * `heroku pipelines:list` with repo
 * `heroku pipelines:info` with full information
