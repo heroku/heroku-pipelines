@@ -185,20 +185,21 @@ function createApps (heroku, archiveURL, pipeline, pipelineName, stagingAppName,
   })
 }
 
+function wait(ms) {
+  return new Promise((resolve, reject) => setTimeout(resolve, ms))
+}
+
 function pollAppStatus (heroku, build) {
-  return new Promise((resolve, reject) => {
-    const count = setInterval(() => {
-      return api.getAppSetup(heroku, build.id).then(request => {
-        if (request.status === 'succeeded' || request.status === 'failed') {
-          clearInterval(count)
-          if (request.status === 'succeeded') {
-            resolve(request)
-          } else {
-            reject(`Couldn't create application ${cli.color.app(build.app.name)}: ${request.failure_message}`)
-          }
-        }
-      })
-    }, 1000)
+  return api.getAppSetup(heroku, build.id).then((setup) => {
+    if (setup.status === 'succeeded') {
+      return setup
+    }
+
+    if (setup.status === 'failed') {
+      throw new Error(`Couldn't create application ${cli.color.app(build.app.name)}: ${setup.failure_message}`)
+    }
+
+    return wait(1000).then(() => pollAppStatus(heroku, build))
   }).catch((error) => {
     return cli.exit(1, error)
   })
