@@ -74,7 +74,7 @@ function createApp (heroku, { archiveURL, name, organization, pipeline, stage })
     params.app.personal = true
   }
 
-  return api.createAppSetup(heroku, params).then((setup) => setup.app)
+  return api.createAppSetup(heroku, params).then((setup) => setup)
 }
 
 function* getNameAndRepo (args) {
@@ -159,6 +159,65 @@ function* getCISettings (yes, organization) {
   return settings
 }
 
+function createApps (heroku, archiveURL, pipeline, pipelineName, stagingAppName, organization) {
+  const prodAppSetupPromise = createApp(heroku, {
+    archiveURL,
+    pipeline,
+    name: pipelineName,
+    stage: 'production',
+    organization
+  })
+
+  const stagingAppSetupPromise = createApp(heroku, {
+    archiveURL,
+    pipeline,
+    name: stagingAppName,
+    stage: 'staging',
+    organization
+  })
+
+  const promises = [prodAppSetupPromise, stagingAppSetupPromise]
+
+  return Promise.all(promises).then(appSetups => {
+    return appSetups
+  }, (error) => {
+    cli.exit(1, error)
+  })
+}
+
+function pollAppStatus (heroku, build) {
+  return new Promise((resolve, reject) => {
+    const count = setInterval(() => {
+      return api.getAppSetup(heroku, build.id).then(request => {
+        if (request.status === 'succeeded' || request.status === 'failed') {
+          clearInterval(count)
+          if (request.status === 'succeeded') {
+            resolve(request)
+          } else {
+            reject(`Couldn't create application ${cli.color.app(build.app.name)}: ${request.failure_message}`)
+          }
+        }
+      })
+    }, 1000)
+  }).catch((error) => {
+    return cli.exit(1, error)
+  })
+}
+
+function checkAppCreations (heroku, appsBuild) {
+  let promises = []
+
+  appsBuild.forEach((build) => {
+    promises.push(pollAppStatus(heroku, build))
+  })
+
+  return Promise.all(promises).then(appsCreated => {
+    return appsCreated
+  }, (error) => {
+    return error
+  })
+}
+
 function setupPipeline (kolkrabbi, app, settings, pipelineID, ciSettings = {}) {
   const promises = [kolkrabbi.updateAppLink(app, settings)]
 
@@ -189,8 +248,7 @@ module.exports = {
   ? Automatically destroy idle review apps after 5 days? Yes
   Creating pipeline... done
   Linking to repo... done
-  Creating ⬢ example (production app)... done
-  Creating ⬢ example-staging (staging app)... done
+  Creating production and staging apps (⬢ example and ⬢ example-staging)
   Configuring pipeline... done
   View your new pipeline by running \`heroku pipelines:open e5a55ffa-de3f-11e6-a245-3c15c2e6bc1e\``,
   needsApp: false,
@@ -260,34 +318,17 @@ module.exports = {
     )
 
     const archiveURL = yield github.getArchiveURL(repoName, repo.default_branch)
+    const appsBuildResponse = yield createApps(heroku, archiveURL, pipeline, pipelineName, stagingAppName, organization)
 
-    yield cli.action(
-      `Creating ${cli.color.app(pipelineName)} (production app)`,
-      createApp(heroku, {
-        archiveURL,
-        pipeline,
-        name: pipelineName,
-        stage: 'production',
-        organization
-      })
-    )
+    yield cli.action(`Creating production and staging apps (${cli.color.app(pipelineName)} and ${cli.color.app(stagingAppName)})`, checkAppCreations(heroku, appsBuildResponse))
 
-    const stagingApp = yield cli.action(
-      `Creating ${cli.color.app(stagingAppName)} (staging app)`,
-      createApp(heroku, {
-        archiveURL,
-        pipeline,
-        name: stagingAppName,
-        stage: 'staging',
-        organization
-      })
-    )
+    const stagingApp = appsBuildResponse.find((appBuild) => appBuild.app.name === stagingAppName).app
 
     yield cli.action(
       'Configuring pipeline',
       setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
     )
-
     yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+    cli.exit(1)
   }))
 }
