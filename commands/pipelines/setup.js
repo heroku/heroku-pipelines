@@ -185,38 +185,28 @@ function createApps (heroku, archiveURL, pipeline, pipelineName, stagingAppName,
   })
 }
 
-function wait(ms) {
+function wait (ms) {
   return new Promise((resolve, reject) => setTimeout(resolve, ms))
 }
 
-function pollAppStatus (heroku, build) {
-  return api.getAppSetup(heroku, build.id).then((setup) => {
+function pollAppSetup (heroku, appSetup) {
+  return api.getAppSetup(heroku, appSetup.id).then((setup) => {
     if (setup.status === 'succeeded') {
       return setup
     }
 
     if (setup.status === 'failed') {
-      throw new Error(`Couldn't create application ${cli.color.app(build.app.name)}: ${setup.failure_message}`)
+      throw new Error(`Couldn't create application ${cli.color.app(setup.app.name)}: ${setup.failure_message}`)
     }
 
-    return wait(1000).then(() => pollAppStatus(heroku, build))
+    return wait(1000).then(() => pollAppSetup(heroku, appSetup))
   }).catch((error) => {
     return cli.exit(1, error)
   })
 }
 
-function checkAppCreations (heroku, appsBuild) {
-  let promises = []
-
-  appsBuild.forEach((build) => {
-    promises.push(pollAppStatus(heroku, build))
-  })
-
-  return Promise.all(promises).then(appsCreated => {
-    return appsCreated
-  }, (error) => {
-    return error
-  })
+function pollAppSetups (heroku, appSetups) {
+  return Promise.all(appSetups.map((appSetup) => pollAppSetup(heroku, appSetup)))
 }
 
 function setupPipeline (kolkrabbi, app, settings, pipelineID, ciSettings = {}) {
@@ -319,11 +309,14 @@ module.exports = {
     )
 
     const archiveURL = yield github.getArchiveURL(repoName, repo.default_branch)
-    const appsBuildResponse = yield createApps(heroku, archiveURL, pipeline, pipelineName, stagingAppName, organization)
+    const appSetups = yield createApps(heroku, archiveURL, pipeline, pipelineName, stagingAppName, organization)
 
-    yield cli.action(`Creating production and staging apps (${cli.color.app(pipelineName)} and ${cli.color.app(stagingAppName)})`, checkAppCreations(heroku, appsBuildResponse))
+    yield cli.action(
+      `Creating production and staging apps (${cli.color.app(pipelineName)} and ${cli.color.app(stagingAppName)})`,
+      pollAppSetups(heroku, appSetups)
+    )
 
-    const stagingApp = appsBuildResponse.find((appBuild) => appBuild.app.name === stagingAppName).app
+    const stagingApp = appSetups.find((appSetup) => appSetup.app.name === stagingAppName).app
 
     yield cli.action(
       'Configuring pipeline',
