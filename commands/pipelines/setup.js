@@ -329,6 +329,5 @@ module.exports = {
       setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
     )
     yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
-    cli.exit(1)
   }))
 }
