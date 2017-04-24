@@ -31,6 +31,11 @@ describe('pipelines:promote', function () {
     pipeline: pipeline
   }
 
+  const targetReleaseWithOutput = {
+    id: '123-target-release-456',
+    output_stream_url: 'https://busl.example/release'
+  }
+
   const sourceCoupling = {
     app: sourceApp,
     id: '123-source-app-456',
@@ -148,6 +153,53 @@ describe('pipelines:promote', function () {
         req.done()
         expect(cli.stdout).to.contain('failed')
         expect(cli.stdout).to.contain('Because reasons')
+      })
+    })
+  })
+
+  context('with release phase', function () {
+    let req, busl
+
+    function mockPromotionTargetsWithRelease (release) {
+      req = nock(api)
+        .post('/pipeline-promotions', {
+          pipeline: { id: pipeline.id },
+          source: { app: { id: sourceApp.id } },
+          targets: [
+            { app: { id: targetApp1.id } }
+          ]
+        })
+        .reply(201, promotion)
+        .get(`/apps/${targetApp1.id}/releases/${release.id}`)
+        .reply(200, targetReleaseWithOutput)
+      busl = nock('https://busl.example')
+        .get('/release')
+        .reply(200, 'Release Command Output')
+
+      let pollCount = 0
+      nock(api)
+        .get(`/pipeline-promotions/${promotion.id}/promotion-targets`)
+        .twice()
+        .reply(200, function () {
+          pollCount++
+
+          return [{
+            app: { id: targetApp1.id },
+            release: { id: release.id },
+            status: pollCount > 1 ? 'successful' : 'pending',
+            error_message: null
+          }]
+        })
+    }
+
+    it('streams the release command output', function () {
+      mockPromotionTargetsWithRelease(targetReleaseWithOutput)
+
+      return cmd.run({ app: sourceApp.name }).then(function () {
+        req.done()
+        busl.done()
+        expect(cli.stdout).to.contain('Release Command Output')
+        expect(cli.stdout).to.contain('successful')
       })
     })
   })

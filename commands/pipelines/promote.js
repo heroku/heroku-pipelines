@@ -81,7 +81,7 @@ function* promote (heroku, label, id, sourceAppId, targetApps, secondFactor) {
   try {
     return yield cli.action(label, heroku.request(options))
   } catch (error) {
-    if (error.body.id !== 'two_factor') {
+    if (!error.body || error.body.id !== 'two_factor') {
       throw error
     }
     const secondFactor = yield getSecondFactor()
