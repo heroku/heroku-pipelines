@@ -4,6 +4,7 @@ const expect = require('chai').expect
 const cli = require('heroku-cli-util')
 const nock = require('nock')
 const cmd = require('../../../commands/pipelines/promote')
+const stdMocks = require('std-mocks')
 
 describe('pipelines:promote', function () {
   const api = 'https://api.heroku.com'
@@ -193,6 +194,7 @@ describe('pipelines:promote', function () {
     }
 
     it('streams the release command output', function () {
+      stdMocks.use()
       mockPromotionTargetsWithRelease(targetReleaseWithOutput)
 
       return cmd.run({ app: sourceApp.name }).then(function () {
@@ -201,6 +203,8 @@ describe('pipelines:promote', function () {
         expect(cli.stdout).to.contain('Release Command Output')
         expect(cli.stdout).to.contain('successful')
       })
+        .then(() => stdMocks.restore())
+        .catch(() => stdMocks.restore())
     })
   })
 })

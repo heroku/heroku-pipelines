@@ -132,12 +132,11 @@ function* streamReleaseCommand (heroku, targets, promotion) {
 
   cli.log('Running release command...')
   yield new Promise(function (resolve, reject) {
-    cli.got.stream(release.output_stream_url)
-      .on('error', reject)
-      .on('end', resolve)
-      .on('data', function (c) {
-        cli.log(c.toString('utf8'))
-      })
+    let stream = cli.got.stream(release.output_stream_url)
+    stream.on('error', reject)
+    stream.on('end', resolve)
+    let piped = stream.pipe(process.stdout)
+    piped.on('error', reject)
   })
 
   return yield pollPromotionStatus(heroku, promotion.id, false)
