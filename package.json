@@ -6,6 +6,9 @@
   "bugs": {
     "url": "https://github.com/heroku/heroku-pipelines/issues"
   },
+  "cli-engine": {
+    "namespace": "heroku"
+  },
   "dependencies": {
     "bluebird": "3.4.7",
     "co": "4.6.0",
