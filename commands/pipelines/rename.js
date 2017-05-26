@@ -8,7 +8,10 @@ module.exports = {
   topic: 'pipelines',
   command: 'rename',
   description: 'rename a pipeline',
-  help: 'Example:\n  $ heroku pipelines:rename example www\n  Renaming example pipeline to www... done',
+  help: `Example:
+		
+    $ heroku pipelines:rename example www
+    Renaming example pipeline to www... done`,
   needsApp: false,
   needsAuth: true,
   args: [
