@@ -8,7 +8,10 @@ module.exports = {
   topic: 'pipelines',
   command: 'update',
   description: 'update this app\'s stage in a pipeline',
-  help: 'Example:\n  $ heroku pipelines:update -s staging -a example-admin\n  Changing example-admin to staging... done',
+  help: `Example:
+
+    $ heroku pipelines:update -s staging -a example-admin
+    Changing example-admin to staging... done`,
   needsApp: true,
   needsAuth: true,
   flags: [

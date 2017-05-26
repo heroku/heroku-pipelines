@@ -8,7 +8,10 @@ module.exports = {
   topic: 'pipelines',
   command: 'destroy',
   description: 'destroy a pipeline',
-  help: 'Example:\n  $ heroku pipelines:destroy example\n  Destroying example pipeline... done',
+  help: `Example:
+
+    $ heroku pipelines:destroy example
+    Destroying example pipeline... done`,
   needsApp: false,
   needsAuth: true,
   args: [
