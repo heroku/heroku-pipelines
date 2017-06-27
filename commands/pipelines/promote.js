@@ -25,7 +25,7 @@ function isFailed (promotionTarget) {
 
 function * getSecondFactor () {
   cli.yubikey.enable()
-  const secondFactor = yield cli.prompt('Two-factor code', {mask: true})
+  const secondFactor = yield cli.prompt('Two-factor code', { mask: true })
   cli.yubikey.disable()
   return secondFactor
 }
@@ -68,15 +68,14 @@ function* promote (heroku, label, id, sourceAppId, targetApps, secondFactor) {
     method: 'POST',
     path: `/pipeline-promotions`,
     body: {
-      pipeline: {id: id},
-      source: {app: {id: sourceAppId}},
-      targets: targetApps.map((app) = > {return {app: {id: app.id}}}
-)
-}
-}
+      pipeline: { id: id },
+      source: { app: { id: sourceAppId } },
+      targets: targetApps.map((app) => { return { app: { id: app.id } } })
+    }
+  }
 
   if (secondFactor) {
-    options.headers = {'Heroku-Two-Factor-Code': secondFactor}
+    options.headers = { 'Heroku-Two-Factor-Code': secondFactor }
   }
 
   try {
@@ -107,8 +106,7 @@ function assertApps (app, targetApps, targetStage) {
 }
 
 function findAppInPipeline (apps, target) {
-  const found = apps.find((app) = > (app.name === target) || (app.id === target)
-)
+  const found = apps.find((app) => (app.name === target) || (app.id === target))
   assert(found, `Cannot find app ${cli.color.app(target)}`)
 
   return found
@@ -185,16 +183,14 @@ Example:
       // We don't have to infer the apps or the stage they want to promote to
 
       // Strip out any empty app names due to something like a trailing comma
-      const targetAppNames = context.flags.to.split(',').filter((appName) = > appName.length >= 1
-    )
+      const targetAppNames = context.flags.to.split(',').filter((appName) => appName.length >= 1)
 
       // Now let's make sure that we can find every target app they specified
       // The only requirement is that the app be in this pipeline. They can be at any stage.
-      targetApps = targetAppNames.map((targetAppNameOrId) = > {
-          assertNotPromotingToSelf(app, targetAppNameOrId)
-          return findAppInPipeline(allApps, targetAppNameOrId)
-        }
-    )
+      targetApps = targetAppNames.map((targetAppNameOrId) => {
+        assertNotPromotingToSelf(app, targetAppNameOrId)
+        return findAppInPipeline(allApps, targetAppNameOrId)
+      })
 
       promotionActionName = `Starting promotion to apps: ${targetAppNames.toString()}`
     } else {
@@ -202,8 +198,7 @@ Example:
 
       assertValidPromotion(app, sourceStage, targetStage)
 
-      targetApps = allApps.filter((app) = > app.coupling.stage === targetStage
-    )
+      targetApps = allApps.filter((app) => app.coupling.stage === targetStage)
 
       assertApps(app, targetApps, targetStage)
 
