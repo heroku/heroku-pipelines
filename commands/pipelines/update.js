@@ -27,6 +27,6 @@ module.exports = {
     const stage = context.flags.stage
 
     yield cli.action(`Changing ${cli.color.app(app)} to ${stage}`,
-                     updateCoupling(heroku, app, stage))
+      updateCoupling(heroku, app, stage))
   }))
 }

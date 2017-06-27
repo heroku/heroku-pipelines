@@ -24,7 +24,7 @@ module.exports = {
       method: 'DELETE',
       path: `/pipelines/${pipeline.id}`,
       body: {name: context.args.name},
-      headers: { 'Accept': 'application/vnd.heroku+json; version=3' }
+      headers: {'Accept': 'application/vnd.heroku+json; version=3'}
     }) // heroku.pipelines(pipeline).destroy(body);
 
     yield cli.action(`Destroying ${cli.color.pipeline(context.args.pipeline)} pipeline`, promise)

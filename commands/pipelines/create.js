@@ -44,7 +44,7 @@ function* run (context, heroku) {
   let pipeline = yield cli.action(`Creating ${name} pipeline`, promise)
 
   yield cli.action(`Adding ${cli.color.app(app)} to ${cli.color.pipeline(pipeline.name)} pipeline as ${stage}`,
-                  createCoupling(heroku, pipeline, app, stage))
+    createCoupling(heroku, pipeline, app, stage))
 }
 
 module.exports = {
