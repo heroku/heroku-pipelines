@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
   }
 }
 
-function validate ({ name, repo }) {
+function validate ({name, repo}) {
   const errors = []
   const [nameIsValid, nameMsg] = validateName(name || '')
   const [repoIsValid, repoMsg] = validateRepo(repo || '')
@@ -35,7 +35,7 @@ function validate ({ name, repo }) {
 
 function validateName (name) {
   const isValid = name.length >= PIPELINE_MIN_LENGTH &&
-                  name.length <= PIPELINE_MAX_LENGTH
+    name.length <= PIPELINE_MAX_LENGTH
   return isValid ? [isValid] : [isValid, ERR_PIPELINE_NAME_LENGTH]
 }
 
@@ -45,23 +45,27 @@ function validateRepo (repo) {
 }
 
 function getGitHubToken (kolkrabbi) {
-  return kolkrabbi.getAccount().then((account) => {
+  return kolkrabbi.getAccount().then((account) = > {
     return account.github.token
-  }, () => {
+  }, () =
+>
+  {
     throw new Error('Account not connected to GitHub.')
-  })
+  }
+)
 }
 
 function getRepo (github, name) {
-  return github.getRepo(name).catch(() => {
-    throw new Error(`Could not access the ${name} repo`)
-  })
+  return github.getRepo(name).catch(() = > {
+      throw new Error(`Could not access the ${name} repo`)
+    }
+)
 }
 
-function createApp (heroku, { archiveURL, name, organization, pipeline, stage }) {
+function createApp (heroku, {archiveURL, name, organization, pipeline, stage}) {
   const params = {
-    source_blob: { url: archiveURL },
-    app: { name },
+    source_blob: {url: archiveURL},
+    app: {name},
     pipeline_coupling: {
       stage,
       pipeline: pipeline.id
@@ -74,7 +78,8 @@ function createApp (heroku, { archiveURL, name, organization, pipeline, stage })
     params.app.personal = true
   }
 
-  return api.createAppSetup(heroku, params).then((setup) => setup)
+  return api.createAppSetup(heroku, params).then((setup) = > setup
+)
 }
 
 function* getNameAndRepo (args) {
@@ -146,7 +151,7 @@ function* hasCIFlag (heroku) {
 }
 
 function* getCISettings (yes, organization) {
-  const settings = yes ? { ci: true } : yield prompt([{
+  const settings = yes ? {ci: true} : yield prompt([{
     type: 'confirm',
     name: 'ci',
     message: 'Enable automatic Heroku CI test runs?'
@@ -178,35 +183,45 @@ function createApps (heroku, archiveURL, pipeline, pipelineName, stagingAppName,
 
   const promises = [prodAppSetupPromise, stagingAppSetupPromise]
 
-  return Promise.all(promises).then(appSetups => {
+  return Promise.all(promises).then(appSetups = > {
     return appSetups
-  }, (error) => {
+  }, (error) =
+>
+  {
     cli.exit(1, error)
-  })
+  }
+)
 }
 
 function wait (ms) {
-  return new Promise((resolve, reject) => setTimeout(resolve, ms))
+  return new Promise((resolve, reject) = > setTimeout(resolve, ms)
+)
 }
 
 function pollAppSetup (heroku, appSetup) {
-  return api.getAppSetup(heroku, appSetup.id).then((setup) => {
-    if (setup.status === 'succeeded') {
-      return setup
-    }
+  return api.getAppSetup(heroku, appSetup.id).then((setup) = > {
+      if (setup.status === 'succeeded'
+)
+  {
+    return setup
+  }
 
-    if (setup.status === 'failed') {
-      throw new Error(`Couldn't create application ${cli.color.app(setup.app.name)}: ${setup.failure_message}`)
-    }
+  if (setup.status === 'failed') {
+    throw new Error(`Couldn't create application ${cli.color.app(setup.app.name)}: ${setup.failure_message}`)
+  }
 
-    return wait(1000).then(() => pollAppSetup(heroku, appSetup))
-  }).catch((error) => {
+  return wait(1000).then(() = > pollAppSetup(heroku, appSetup)
+)
+}).
+  catch((error) = > {
     return cli.exit(1, error)
-  })
+  }
+)
 }
 
 function pollAppSetups (heroku, appSetups) {
-  return Promise.all(appSetups.map((appSetup) => pollAppSetup(heroku, appSetup)))
+  return Promise.all(appSetups.map((appSetup) = > pollAppSetup(heroku, appSetup))
+)
 }
 
 function setupPipeline (kolkrabbi, app, settings, pipelineID, ciSettings = {}) {
@@ -218,11 +233,14 @@ function setupPipeline (kolkrabbi, app, settings, pipelineID, ciSettings = {}) {
     )
   }
 
-  return Promise.all(promises).then(([appLink]) => {
+  return Promise.all(promises).then(([appLink]) = > {
     return appLink
-  }, (error) => {
+  }, (error) =
+>
+  {
     cli.error(error.response.body.message)
-  })
+  }
+)
 }
 
 module.exports = {
@@ -276,7 +294,7 @@ module.exports = {
       hasValue: false
     }
   ],
-  run: cli.command(co.wrap(function*(context, heroku) {
+  run: cli.command(co.wrap(function* (context, heroku) {
     const errors = validate(context.args)
 
     if (errors.length) {
@@ -288,7 +306,7 @@ module.exports = {
     const github = new GitHubAPI(context.version, yield getGitHubToken(kolkrabbi))
 
     const organization = context.flags.organization || context.flags.team
-    const { name: pipelineName, repo: repoName } = yield getNameAndRepo(context.args)
+    const {name: pipelineName, repo: repoName} = yield getNameAndRepo(context.args)
     const stagingAppName = pipelineName + STAGING_APP_INDICATOR
     const repo = yield getRepo(github, repoName)
     const settings = yield getSettings(context.flags.yes, repo.default_branch)
@@ -316,7 +334,9 @@ module.exports = {
       pollAppSetups(heroku, appSetups)
     )
 
-    const stagingApp = appSetups.find((appSetup) => appSetup.app.name === stagingAppName).app
+    const stagingApp = appSetups.find((appSetup) = > appSetup.app.name === stagingAppName
+    ).
+    app
 
     yield cli.action(
       'Configuring pipeline',
