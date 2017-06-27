@@ -7,7 +7,7 @@ const cmd = {
   topic: 'pipelines',
   description: 'list pipelines you have access to',
   help: `Example:
-		
+
     $ heroku pipelines
     === My Pipelines
     example

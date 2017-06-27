@@ -11,7 +11,7 @@ module.exports = {
   command: 'info',
   description: 'show list of apps in a pipeline',
   help: `Example:
-		
+
     $ heroku pipelines:info example
     === example
     Staging:     example-staging

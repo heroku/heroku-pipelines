@@ -15,7 +15,7 @@ module.exports = {
   description: 'add this app to a pipeline',
   help: `The app and pipeline names must be specified.
 The stage of the app will be guessed based on its name if not specified.
-		
+
 Example:
 
     $ heroku pipelines:add example -a example-admin -s production

@@ -10,7 +10,7 @@ module.exports = {
   command: 'remove',
   description: 'remove this app from its pipeline',
   help: `Example:
-	
+
     $ heroku pipelines:remove -a example-admin
     Removing example-admin... done`,
   needsApp: true,

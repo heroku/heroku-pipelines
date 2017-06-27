@@ -9,7 +9,7 @@ module.exports = {
   command: 'open',
   description: 'open a pipeline in dashboard',
   help: `Example:
-		
+
     $ heroku pipelines:open example`,
   needsApp: false,
   needsAuth: true,

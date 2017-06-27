@@ -151,9 +151,9 @@ module.exports = {
     $ heroku pipelines:promote -a example-staging
     Promoting example-staging to example (production)... done, v23
     Promoting example-staging to example-admin (production)... done, v54
-		
+
 Example:
-		
+
     $ heroku pipelines:promote -a example-staging --to my-production-app1,my-production-app2
     Starting promotion to apps: my-production-app1,my-production-app2... done
     Waiting for promotion to complete... done

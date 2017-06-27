@@ -9,7 +9,7 @@ module.exports = {
   command: 'rename',
   description: 'rename a pipeline',
   help: `Example:
-		
+
     $ heroku pipelines:rename example www
     Renaming example pipeline to www... done`,
   needsApp: false,
