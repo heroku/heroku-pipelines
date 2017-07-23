@@ -6,6 +6,7 @@ let infer = require('../../lib/infer')
 let disambiguate = require('../../lib/disambiguate')
 let prompt = require('../../lib/prompt')
 let stageNames = require('../../lib/stages').inferrableStageNames
+const {flags} = require('cli-engine-heroku')
 
 const createCoupling = require('../../lib/api').createCoupling
 
@@ -22,11 +23,9 @@ Example:
     Adding example-admin to example pipeline as production... done`,
   needsApp: true,
   needsAuth: true,
-  args: [
-    {name: 'pipeline', description: 'name of pipeline', optional: false}
-  ],
   flags: [
-    {name: 'stage', char: 's', description: 'stage of first app in pipeline', hasValue: true}
+    {name: 'stage', char: 's', description: 'stage of first app in pipeline', hasValue: true},
+    flags.pipeline({required: true})
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
     const app = context.app
@@ -35,7 +34,7 @@ Example:
     let guesses = infer(context.app)
     let questions = []
 
-    let pipeline = yield disambiguate(heroku, context.args.pipeline)
+    let pipeline = yield disambiguate(heroku, context.pipeline)
 
     if (context.flags.stage) {
       stage = context.flags.stage
