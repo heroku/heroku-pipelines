@@ -58,8 +58,8 @@ describe('pipelines:info', function () {
     .reply(200, apps)
 
     return cmd.run({ args: { pipeline: 'example' }, flags: {} }).then(() => {
-      cli.stdout.should.contain('staging:')
       cli.stdout.should.contain('example-staging')
+      cli.stdout.should.contain('staging')
     })
     .then(() => api.done())
   })

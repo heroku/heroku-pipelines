@@ -3,9 +3,9 @@
 const co = require('co')
 const cli = require('heroku-cli-util')
 const disambiguate = require('../../lib/disambiguate')
-const stageNames = require('../../lib/stages').names
 const listPipelineApps = require('../../lib/api').listPipelineApps
 const getTeam = require('../../lib/api').getTeam
+const sortBy = require('lodash.sortby')
 
 // For user pipelines we need to use their couplings to determine user email
 function getUserPipelineOwner (apps, userId) {
@@ -38,34 +38,18 @@ module.exports = {
   run: cli.command(co.wrap(function* (context, heroku) {
     const pipeline = yield disambiguate(heroku, context.args.pipeline)
 
-    const apps = yield listPipelineApps(heroku, pipeline.id)
+    let apps = yield listPipelineApps(heroku, pipeline.id)
+    const reviewApps = sortBy(apps.filter(app => app.coupling.stage === 'review'), ['name'])
+    const stagingApps = sortBy(apps.filter(app => app.coupling.stage === 'staging'), ['name'])
+    const productionApps = sortBy(apps.filter(app => app.coupling.stage === 'production'), ['name'])
 
-    // Sort Apps by stage, name
-    // Display in table
-    let stages = {}
-    let name
-
-    for (let app in apps) {
-      if (apps.hasOwnProperty(app)) {
-        let stage = apps[app].coupling.stage
-        name = apps[app].name
-
-        if (context.flags['with-owners']) {
-          name += ` (${apps[app].owner.email})`
-        }
-
-        if (stages[stage]) {
-          stages[apps[app].coupling.stage].push(name)
-        } else {
-          stages[apps[app].coupling.stage] = [name]
-        }
-      }
-    }
+    apps = reviewApps.concat(stagingApps).concat(productionApps)
 
     if (context.flags.json) {
       cli.styledJSON({pipeline, apps})
     } else {
-      cli.styledHeader(pipeline.name)
+      cli.log(`name:  ${pipeline.name}`)
+
       if (pipeline.owner) {
         let owner
 
@@ -77,8 +61,20 @@ module.exports = {
         }
         cli.log(`owner: ${owner}`)
       }
+      cli.log('')
 
-      cli.styledHash(stages, stageNames)
+      let columns = [
+        {key: 'name', label: 'app name', format: (n) => cli.color.app(n)},
+        {key: 'coupling.stage', label: 'stage'}
+      ]
+
+      if (context.flags['with-owners']) {
+        columns.push({
+          key: 'owner.email', label: 'owner', format: (e) => e.endsWith('@herokumanager.com') ? `${e.split('@')[0]} (team)` : e
+        })
+      }
+
+      cli.table(apps, { columns })
     }
   }))
 }
