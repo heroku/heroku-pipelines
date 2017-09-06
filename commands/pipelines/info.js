@@ -43,11 +43,12 @@ module.exports = {
     const pipeline = yield disambiguate(heroku, context.args.pipeline)
 
     let apps = yield listPipelineApps(heroku, pipeline.id)
+    const developmentApps = sortBy(apps.filter(app => app.coupling.stage === 'development'), ['name'])
     const reviewApps = sortBy(apps.filter(app => app.coupling.stage === 'review'), ['name'])
     const stagingApps = sortBy(apps.filter(app => app.coupling.stage === 'staging'), ['name'])
     const productionApps = sortBy(apps.filter(app => app.coupling.stage === 'production'), ['name'])
 
-    apps = reviewApps.concat(stagingApps).concat(productionApps)
+    apps = developmentApps.concat(reviewApps).concat(stagingApps).concat(productionApps)
 
     if (context.flags.json) {
       cli.styledJSON({pipeline, apps})
