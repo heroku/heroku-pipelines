@@ -14,6 +14,10 @@ function getUserPipelineOwner (apps, userId) {
       return apps[app].owner.email
     }
   }
+
+  // If pipeline owner doesn't own any application and type is user (unlikely)
+  // We return userId as default
+  return userId
 }
 
 module.exports = {
