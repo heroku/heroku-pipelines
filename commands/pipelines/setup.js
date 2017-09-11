@@ -279,7 +279,7 @@ module.exports = {
     const kolkrabbi = new KolkrabbiAPI(context.version, heroku.options.token)
     const github = new GitHubAPI(context.version, yield getGitHubToken(kolkrabbi))
 
-    const organization = context.org || context.team || context.flags.team
+    const organization = context.org || context.team || context.flags.team || context.flags.organization
     const {name: pipelineName, repo: repoName} = yield getNameAndRepo(context.args)
     const stagingAppName = pipelineName + STAGING_APP_INDICATOR
     const repo = yield getRepo(github, repoName)

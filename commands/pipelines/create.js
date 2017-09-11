@@ -39,11 +39,11 @@ function* run (context, heroku) {
     })
   }
 
-  owner = context.org || context.team || context.flags.team
-  ownerType = owner ? 'team' : 'user'
+  const teamName = context.org || context.team || context.flags.team
+  ownerType = teamName ? 'team' : 'user'
 
-  // If team or org is not specified, we assing ownership to the user creating
-  owner = owner ? yield api.getTeam(heroku, owner) : yield api.getAccountInfo(heroku)
+  // If team or org is not specified, we assign ownership to the user creating
+  owner = teamName ? yield api.getTeam(heroku, teamName) : yield api.getAccountInfo(heroku)
   ownerID = owner.id
 
   owner = { id: ownerID, type: ownerType }
