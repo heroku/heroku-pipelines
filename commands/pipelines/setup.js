@@ -233,7 +233,7 @@ module.exports = {
 
   help: `Example:
 
-    heroku pipelines:setup example githuborg/reponame -o example-org
+    $ heroku pipelines:setup example githuborg/reponame -o example-org
     ? Automatically deploy the master branch to staging? Yes
     ? Wait for CI to pass before deploying the master branch to staging? Yes
     ? Enable review apps? Yes
