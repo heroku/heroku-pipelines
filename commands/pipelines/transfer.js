@@ -36,9 +36,32 @@ module.exports = {
   help: `Example:
 
     $ heroku pipelines:transfer me@example.com -p example
+    === example
+
+    app name              stage
+    ────────────────────  ───────────
+    ⬢ example-dev         development
+    ⬢ example-staging     staging
+    ⬢ example-prod        production
+
+     ▸    This will transfer example and all of the listed apps to the me@example.com account
+     ▸    to proceed, type edamame or re-run this command with --confirm example
+    > example
     Transferring example pipeline to the me@example.com account... done
 
     $ heroku pipelines:transfer acme-widgets -p example
+    === example
+
+    app name              stage
+    ────────────────────  ───────────
+    ⬢ example-dev         development
+    ⬢ example-staging     staging
+    ⬢ example-prod        production
+
+     ▸    This will transfer example and all of the listed apps to the acme-widgets team
+     ▸    to proceed, type edamame or re-run this command with --confirm example
+    > example
+
     Transferring example pipeline to the acme-widgets team... done`,
   needsApp: false,
   needsAuth: true,

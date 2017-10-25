@@ -13,7 +13,7 @@ module.exports = {
   help: `Example:
 
   $ heroku pipelines:info example
-  name:  example
+  === example
   owner: my-team (team)
 
   app name                     stage
