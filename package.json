@@ -22,7 +22,7 @@
     "cli-engine-heroku": "^5.0.4",
     "co": "^4.6.0",
     "got": "^6.7.1",
-    "heroku-cli-util": "^7.0.2",
+    "heroku-cli-util": "^8.0.0",
     "inflection": "^1.12.0",
     "inquirer": "^5.1.0",
     "lodash.flatten": "^4.4.0",
