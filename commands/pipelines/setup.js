@@ -136,16 +136,6 @@ function* getSettings (yes, branch) {
   }])
 }
 
-function* hasCIFlag (heroku) {
-  let hasFlag
-  try {
-    hasFlag = (yield api.getAccountFeature(heroku, 'ci')).enabled
-  } catch (error) {
-    hasFlag = false
-  }
-  return hasFlag
-}
-
 function* getCISettings (yes, organization) {
   const settings = yes ? {ci: true} : yield prompt([{
     type: 'confirm',
@@ -285,10 +275,7 @@ module.exports = {
     const repo = yield getRepo(github, repoName)
     const settings = yield getSettings(context.flags.yes, repo.default_branch)
 
-    let ciSettings
-    if (yield hasCIFlag(heroku)) {
-      ciSettings = yield getCISettings(context.flags.yes, organization)
-    }
+    let ciSettings = yield getCISettings(context.flags.yes, organization)
 
     let ownerType = organization ? 'team' : 'user'
 
