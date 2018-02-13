@@ -8,6 +8,7 @@ const cmd = require('../../../commands/pipelines/setup')
 describe('pipelines:setup', function () {
   beforeEach(function () {
     cli.mockConsole()
+    nock.disableNetConnect()
     sinon.stub(cli, 'open').returns(Promise.resolve())
   })
 
