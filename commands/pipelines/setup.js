@@ -11,7 +11,6 @@ const getGitHubToken = require('./setup/getGitHubToken')
 const getNameAndRepo = require('./setup/getNameAndRepo')
 const getRepo = require('./setup/getRepo')
 const getSettings = require('./setup/getSettings')
-const hasCIFlag = require('./setup/hasCIFlag')
 const getCISettings = require('./setup/getCISettings')
 const setupPipeline = require('./setup/setupPipeline')
 const createApps = require('./setup/createApps')
@@ -76,11 +75,7 @@ module.exports = {
     const repo = yield getRepo(github, repoName)
     const settings = yield getSettings(context.flags.yes, repo.default_branch)
 
-    let ciSettings
-    if (yield hasCIFlag(heroku)) {
-      ciSettings = yield getCISettings(context.flags.yes, organization)
-    }
-
+    let ciSettings = yield getCISettings(context.flags.yes, organization)
     let ownerType = organization ? 'team' : 'user'
 
     // If team or org is not specified, we assign ownership to the user creating
@@ -110,7 +105,9 @@ module.exports = {
     const stagingApp = appSetups.find((appSetup) => appSetup.app.name === stagingAppName).app
 
     let setup = setupPipeline(kolkrabbi, stagingApp.id, settings, pipeline.id, ciSettings)
-    yield cli.action('Configuring pipeline', setup)
-    yield cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+
+    yield cli.action('Configuring pipeline', setup).then(() => {
+      cli.open(`https://dashboard.heroku.com/pipelines/${pipeline.id}`)
+    })
   }))
 }

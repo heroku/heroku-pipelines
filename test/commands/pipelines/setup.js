@@ -35,6 +35,12 @@ describe('pipelines:setup', function () {
       kolkrabbi.done()
     }
 
+    function stubCI (team = null) {
+      let args = { ci: true }
+      if (team) { args.organization = team }
+      kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, args).reply(200)
+    }
+
     beforeEach(function () {
       archiveURL = 'https://example.com/archive.tar.gz'
       kolkrabbiAccount = { github: { token: '123-abc' } }
