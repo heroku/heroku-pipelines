@@ -35,9 +35,7 @@ describe('pipelines:setup', function () {
       kolkrabbi.done()
     }
 
-    function stubCI (team = null) {
-      let args = { ci: true }
-      if (team) { args.organization = team }
+    function stubCI (args) {
       kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, args).reply(200)
     }
 
@@ -115,25 +113,20 @@ describe('pipelines:setup', function () {
           api.get('/users/~').reply(200, { id: '1234-567' })
         })
 
-        it('creates apps in the personal account', function* () {
-          return cmd.run({ args: {}, flags: {} }).then(() => { nockDone() })
-        })
-
-        it('enables ci if the user is flagged in', function* () {
-          api.get('/account/features/ci').reply(200, { enabled: true })
-          kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, {
-            ci: true
-          }).reply(200)
-
+        it('creates apps in the personal account with CI enabled', function* () {
+          stubCI({ name: pipeline.name, repo: repo.name, ci: true })
           return cmd.run({ args: {}, flags: {} }).then(() => { nockDone() })
         })
 
         it('downcases capitalised pipeline names', function* () {
+          stubCI({ name: pipeline.name, repo: repo.name, ci: true })
+
           return cmd.run({ args: { name: pipeline.name.toUpperCase() },
-            flags: {} }).then(() => { nockDone() })
+            flags: {} }).then(() => nockDone())
         })
 
         it('does not prompt for options with the -y flag', function* () {
+          stubCI({ ci: true })
           return cmd.run({
             args: {
               name: pipeline.name.toUpperCase()
@@ -142,6 +135,7 @@ describe('pipelines:setup', function () {
               yes: true
             }
           }).then(() => {
+            nockDone()
             expect(inquirer.prompt).not.to.have.beenCalled
           })
         })
@@ -162,21 +156,11 @@ describe('pipelines:setup', function () {
 
             api.get(`/app-setups/${coupling.id}`).reply(200, { status: 'succeeded' })
           })
-
           api.get('/teams/test-org').reply(200, { id: '89-0123-456' })
+          stubCI({ name: pipeline.name, repo: repo.name, organization: team, ci: true })
         })
 
-        it('creates apps in a team', function* () {
-          return cmd.run({ args: {}, flags: { team } }).then(() => { nockDone() })
-        })
-
-        it('enables ci billed to the org if the user is flagged in', function* () {
-          api.get('/account/features/ci').reply(200, { enabled: true })
-          kolkrabbi.patch(`/pipelines/${pipeline.id}/repository`, {
-            ci: true,
-            organization: team
-          }).reply(200)
-
+        it('creates apps in a team with CI enabled', function* () {
           return cmd.run({ args: {}, flags: { team } }).then(() => { nockDone() })
         })
       })
