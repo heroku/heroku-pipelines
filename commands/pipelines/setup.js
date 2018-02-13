@@ -29,6 +29,7 @@ module.exports = {
     ? Enable review apps? Yes
     ? Automatically create review apps for every PR? Yes
     ? Automatically destroy idle review apps after 5 days? Yes
+    ? Enable automatic Heroku CI test runs? Yes
     Creating pipeline... done
     Linking to repo... done
     Creating production and staging apps (⬢ example and ⬢ example-staging)
