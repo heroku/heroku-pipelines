@@ -7,7 +7,6 @@
     "url": "https://github.com/heroku/heroku-pipelines/issues"
   },
   "cli-engine": {
-    "bin": "heroku",
     "topics": {
       "stack": {
         "description": "manage heroku stacks",
