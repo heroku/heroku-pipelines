@@ -1,6 +1,12 @@
 const prompt = require('../../../lib/prompt')
 const Validate = require('./validate')
 
+function filter (obj) {
+  const ret = {}
+  Object.keys(obj).filter((key) => obj[key] !== undefined).forEach((key) => { ret[key] = obj[key] })
+  return ret
+}
+
 function* getNameAndRepo (args) {
   const answer = yield prompt([{
     type: 'input',
@@ -22,7 +28,7 @@ function* getNameAndRepo (args) {
     }
   }])
 
-  const reply = Object.assign(answer, args)
+  const reply = Object.assign(filter(answer), filter(args))
   reply.name = reply.name.toLowerCase().replace(/\s/g, '-')
 
   return reply
