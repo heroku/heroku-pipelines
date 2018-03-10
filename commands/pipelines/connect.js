@@ -43,12 +43,6 @@ module.exports = {
   ],
   flags: [
     flags.team({name: 'team', hasValue: true, description: 'the team which will own the apps (can also use --org)'}),
-    {
-      name: 'yes',
-      char: 'y',
-      description: 'accept all default settings without prompting',
-      hasValue: false
-    }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
     const errors = Validate.nameAndRepo(context.args)
