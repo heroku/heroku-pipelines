@@ -3,14 +3,10 @@ const co = require('co')
 const api = require('../../lib/api')
 const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
 
-const {
-  flags
-} = require('cli-engine-heroku')
-
 module.exports = {
   topic: 'pipelines',
   command: 'reviewapps',
-  description: 'setup review apps',
+  description: 'setup review apps on an existing pipeline',
 
   help: `Example:
 
@@ -43,7 +39,7 @@ module.exports = {
     {
       name: 'app',
       char: 'a',
-      description: 'default app for review apps',
+      description: 'parent app used by review apps',
       hasValue: true,
       required: true
     },

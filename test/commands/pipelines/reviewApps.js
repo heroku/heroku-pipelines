@@ -47,7 +47,6 @@ describe('pipelines:reviewapps', function () {
 
     kolkrabbi = nock('https://kolkrabbi.heroku.com')
     kolkrabbi.get('/account/github/token').reply(200, kolkrabbiAccount)
-    // kolkrabbi.post(`/pipelines/${pipeline.id}/repository`).reply(201, {})
     kolkrabbi.patch(`/apps/${app.id}/github`).reply(200, {})
 
     github = nock('https://api.github.com')
