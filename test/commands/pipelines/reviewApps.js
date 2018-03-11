@@ -1,9 +1,6 @@
 const cli = require('heroku-cli-util')
 const nock = require('nock')
-const sinon = require('sinon')
-const inquirer = require('inquirer')
 const expect = require('chai').expect
-
 const cmd = require('../../../commands/pipelines/reviewApps')
 
 describe('pipelines:reviewapps', function () {
@@ -21,7 +18,6 @@ describe('pipelines:reviewapps', function () {
 
     cli.mockConsole()
     nock.disableNetConnect()
-    sinon.stub(cli, 'open').returns(Promise.resolve())
 
     kolkrabbiAccount = {
       github: {
@@ -50,17 +46,10 @@ describe('pipelines:reviewapps', function () {
     kolkrabbi.patch(`/apps/${app.id}/github`).reply(200, {})
 
     github = nock('https://api.github.com')
-
-    sinon.stub(inquirer, 'prompt').resolves({
-      name: pipeline.name,
-      app: app.name
-    })
   })
 
   afterEach(function () {
     nock.cleanAll()
-    cli.open.restore()
-    inquirer.prompt.restore()
   })
 
   context('and pipeline name is valid', function () {
