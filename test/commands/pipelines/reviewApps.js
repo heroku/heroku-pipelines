@@ -91,7 +91,6 @@ describe('pipelines:reviewapps', function () {
     })
 
     context('is enabled', function () {
-
       context('uses default settings', function () {
 
         it('it succeeds', function* () {
@@ -111,7 +110,6 @@ describe('pipelines:reviewapps', function () {
           })
 
         })
-
       })
 
       context('it does not use defaults', function () {
@@ -131,11 +129,8 @@ describe('pipelines:reviewapps', function () {
             expect(cli.stdout).to.include('Enabling auto deployment')
             expect(cli.stderr).to.include('Configuring pipeline')
           })
-
         })
-
       })
-
     })
 
     context('is disabled', function () {
