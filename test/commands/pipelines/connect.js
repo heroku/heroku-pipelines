@@ -4,13 +4,17 @@ const expect = require('chai').expect
 const cmd = require('../../../commands/pipelines/connect')
 
 describe('pipelines:connect', function () {
+
   beforeEach(function () {
     cli.mockConsole()
     nock.disableNetConnect()
   })
 
   afterEach(function () {
-    nock.cleanAll()
+    if(!nock.isDone()) {
+      this.test.error(new Error('Not all nock interceptors were used!'));
+      nock.cleanAll();
+    }
   })
 
   it('errors if the user is not linked to GitHub', function* () {
@@ -34,6 +38,7 @@ describe('pipelines:connect', function () {
     }
 
     beforeEach(function () {
+
       kolkrabbiAccount = {
         github: {
           token: '123-abc'
@@ -41,84 +46,45 @@ describe('pipelines:connect', function () {
       }
 
       pipeline = {
-        id: '123-pipeline',
+        id: 123,
         name: 'my-pipeline'
       }
 
       repo = {
-        id: 123,
+        id: 1235,
         default_branch: 'master',
         name: 'my-org/my-repo'
       }
 
       kolkrabbi = nock('https://kolkrabbi.heroku.com')
+      
       kolkrabbi.get('/account/github/token').reply(200, kolkrabbiAccount)
+      
       kolkrabbi.post(`/pipelines/${pipeline.id}/repository`).reply(201, {})
 
       github = nock('https://api.github.com')
-
-      github.get(`/repos/${repo.name}`).reply(200, repo)
+      github.get(`/repos/${repo.name}`).reply(200, {repo})
 
       api = nock('https://api.heroku.com')
-
-      nock('https://api.heroku.com')
-        .get(`/pipelines?eq[name]=${pipeline.name}`)
-        .reply(200, [{
+      api.get(`/pipelines/${pipeline.name}`)
+        .reply(200, {
           id: pipeline.id,
           name: pipeline.name
-        }])
+        })
     })
 
-    context('in a personal account', function () {
+    it('shows success', function* () {
 
-      beforeEach(function () {
-        api.get('/users/~').reply(200, {
-          id: '1234-567'
-        })
-      })
-
-      it('shows success', function* () {
-
-        return cmd.run({
-          args: {
-            name: pipeline.name,
-            repo: repo.name
-          },
-          flags: {}
-        }).then(() => {
-          expect(cli.stderr).to.include('Getting pipeline ID...')
-          expect(cli.stderr).to.include('Linking to repo...')
-          expect(cli.stdout).to.equal('')
-        })
-      })
-    })
-
-    context('in a team', function () {
-
-      let team
-
-      beforeEach(function () {
-        team = 'test-org'
-        api.get('/teams/test-org').reply(200, {
-          id: '89-0123-456'
-        })
-      })
-
-      it('shows success', function* () {
-
-        return cmd.run({
-          args: {
-            name: pipeline.name,
-            repo: repo.name
-          },
-          flags: {
-            team
-          }
-        }).then(() => {
-          expect(cli.stderr).to.include('Getting pipeline ID...')
-          expect(cli.stderr).to.include('Linking to repo...')
-          expect(cli.stdout).to.equal('')
-        })
+      return cmd.run({
+        args: {
+          name: pipeline.name,
+          repo: repo.name
+        },
+        flags: {}
+      }).then(() => {
+        expect(cli.stderr).to.include('Getting pipeline ID...')
+        expect(cli.stderr).to.include('Linking to repo...')
+        expect(cli.stdout).to.equal('')
       })
     })
 
