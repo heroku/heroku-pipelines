@@ -3,7 +3,6 @@ const co = require('co')
 const api = require('../../lib/api')
 const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
 const GitHubAPI = require('../../lib/github-api')
-
 const Validate = require('./setup/validate')
 const getGitHubToken = require('./setup/getGitHubToken')
 const getNameAndRepo = require('./setup/getNameAndRepo')
@@ -25,15 +24,21 @@ module.exports = {
       name: 'name',
       description: 'name of pipeline',
       optional: true
-    },
+    }
+  ],
+  flags: [
     {
       name: 'repo',
+      char: 'r',
       description: 'the GitHub repository to connect',
-      optional: true
+      hasValue: true,
+      required: true
     }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
-    const errors = Validate.nameAndRepo(context.args)
+
+    const args = { name: context.args.name, repo: context.flags.repo }
+    const errors = Validate.nameAndRepo(args)
 
     if (errors.length) {
       cli.error(errors.join(', '))
@@ -45,18 +50,14 @@ module.exports = {
     const {
       name: pipelineName,
       repo: repoName
-    } = yield getNameAndRepo(context.args)
+    } = yield getNameAndRepo(args)
     const repo = yield getRepo(github, repoName)
 
-    const pipeline = yield cli.action(
-      'Getting pipeline ID',
-      api.getPipeline(heroku, pipelineName)
-    )
+    const pipeline = yield api.getPipeline(heroku, pipelineName)
 
     yield cli.action(
       'Linking to repo',
       kolkrabbi.createPipelineRepository(pipeline.id, repo.id)
     )
-
   }))
 }

@@ -4,7 +4,6 @@ const expect = require('chai').expect
 const cmd = require('../../../commands/pipelines/connect')
 
 describe('pipelines:connect', function () {
-
   beforeEach(function () {
     cli.mockConsole()
     nock.disableNetConnect()
@@ -57,9 +56,7 @@ describe('pipelines:connect', function () {
       }
 
       kolkrabbi = nock('https://kolkrabbi.heroku.com')
-      
       kolkrabbi.get('/account/github/token').reply(200, kolkrabbiAccount)
-      
       kolkrabbi.post(`/pipelines/${pipeline.id}/repository`).reply(201, {})
 
       github = nock('https://api.github.com')
@@ -74,15 +71,14 @@ describe('pipelines:connect', function () {
     })
 
     it('shows success', function* () {
-
       return cmd.run({
         args: {
-          name: pipeline.name,
-          repo: repo.name
+          name: pipeline.name
         },
-        flags: {}
+        flags: {
+          repo: repo.name
+        }
       }).then(() => {
-        expect(cli.stderr).to.include('Getting pipeline ID...')
         expect(cli.stderr).to.include('Linking to repo...')
         expect(cli.stdout).to.equal('')
       })
