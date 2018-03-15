@@ -84,6 +84,10 @@ describe('pipelines:connect', function () {
       })
     })
 
+    // TODO: handle
+//     Linking to repo... !
+//  ▸    Response code 422 (Unprocessable Entity)
+
   })
 
 })

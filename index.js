@@ -19,6 +19,5 @@ exports.commands = flatten([
   require('./commands/pipelines/setup.js'),
   require('./commands/pipelines/transfer.js'),
   require('./commands/review_apps/disable.js'),
-  require('./commands/review_apps/enable.js'),
-  require('./commands/review_apps/set.js')
+  require('./commands/review_apps/enable.js')
 ])

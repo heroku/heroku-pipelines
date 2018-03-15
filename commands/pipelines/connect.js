@@ -12,7 +12,6 @@ module.exports = {
   topic: 'pipelines',
   command: 'connect',
   description: 'connect a github repo to an existing pipeline',
-
   help: `Example:
 
     $ heroku pipelines:connect example githuborg/reponame
