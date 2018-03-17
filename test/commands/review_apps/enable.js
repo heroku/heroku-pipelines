@@ -4,7 +4,6 @@ const expect = require('chai').expect
 const cmd = require('../../../commands/review_apps/enable')
 
 describe('reviewapps:enable', function () {
-
   let pipeline, repo, app, kolkrabbiAccount
   let api, kolkrabbi, github
 
@@ -15,7 +14,6 @@ describe('reviewapps:enable', function () {
   }
 
   beforeEach(function () {
-
     cli.mockConsole()
     nock.disableNetConnect()
 
@@ -56,7 +54,6 @@ describe('reviewapps:enable', function () {
   })
 
   it('it succeeds with defaults', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -65,11 +62,9 @@ describe('reviewapps:enable', function () {
     }).then(() => {
       expect(cli.stderr).to.include('Configuring pipeline')
     })
-
   })
 
   it('it succeeds with autodeploy', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -83,7 +78,6 @@ describe('reviewapps:enable', function () {
   })
 
   it('it succeeds with autodestroy', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -97,7 +91,6 @@ describe('reviewapps:enable', function () {
   })
 
   it('it succeeds with autodeploy and autodestroy', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,

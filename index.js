@@ -4,6 +4,7 @@ exports.topic = [
   { name: 'pipelines', description: 'manage collections of apps in pipelines' },
   { name: 'reviewapps', description: 'manage reviewapps in pipelines' }
 ]
+
 exports.commands = flatten([
   require('./commands/pipelines/add.js'),
   require('./commands/pipelines/connect.js'),

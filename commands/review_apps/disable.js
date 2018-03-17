@@ -1,5 +1,6 @@
 const cli = require('heroku-cli-util')
 const co = require('co')
+const { flags } = require('cli-engine-heroku')
 const api = require('../../lib/api')
 const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
 
@@ -17,12 +18,7 @@ module.exports = {
   wantsOrg: false,
   args: [],
   flags: [
-    {
-      name: 'pipeline',
-      char: 'p',
-      description: 'name of pipeline',
-      hasValue: true
-    },
+    flags.pipeline({ name: 'pipeline', required: true, hasValue: true }),
     {
       name: 'app',
       char: 'a',
@@ -32,19 +28,16 @@ module.exports = {
     },
     {
       name: 'autodeploy',
-      char: 'p',
       description: 'autodeploy the review app',
       hasValue: false
     },
     {
       name: 'autodestroy',
-      char: 'u',
       description: 'autodestroy the review app',
       hasValue: false
     }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
-
     let disable = false;
 
     // if no flags are passed then the user is disabling review apps

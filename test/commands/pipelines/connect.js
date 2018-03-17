@@ -37,7 +37,6 @@ describe('pipelines:connect', function () {
     }
 
     beforeEach(function () {
-
       kolkrabbiAccount = {
         github: {
           token: '123-abc'
@@ -83,11 +82,5 @@ describe('pipelines:connect', function () {
         expect(cli.stdout).to.equal('')
       })
     })
-
-    // TODO: handle
-//     Linking to repo... !
-//  ▸    Response code 422 (Unprocessable Entity)
-
   })
-
 })

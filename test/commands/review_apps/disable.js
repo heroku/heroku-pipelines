@@ -4,7 +4,6 @@ const expect = require('chai').expect
 const cmd = require('../../../commands/review_apps/disable')
 
 describe('reviewapps:disable', function () {
-
   let pipeline, repo, app, kolkrabbiAccount
   let api, kolkrabbi, github
 
@@ -15,7 +14,6 @@ describe('reviewapps:disable', function () {
   }
 
   beforeEach(function () {
-
     cli.mockConsole()
     nock.disableNetConnect()
 
@@ -56,7 +54,6 @@ describe('reviewapps:disable', function () {
   })
 
   it('it succeeds with defaults', function () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -68,7 +65,6 @@ describe('reviewapps:disable', function () {
   })
 
   it('it disables autodeploys', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -81,7 +77,6 @@ describe('reviewapps:disable', function () {
   })
 
   it('it disables autodestroy', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,
@@ -94,7 +89,6 @@ describe('reviewapps:disable', function () {
   })
 
   it('it succeeds with autodeploy and autodestroy', function* () {
-
     return cmd.run({
       flags: {
         pipeline: pipeline.name,

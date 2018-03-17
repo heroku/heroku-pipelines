@@ -1,5 +1,6 @@
 const cli = require('heroku-cli-util')
 const co = require('co')
+const { flags } = require('cli-engine-heroku')
 const api = require('../../lib/api')
 const KolkrabbiAPI = require('../../lib/kolkrabbi-api')
 
@@ -19,13 +20,7 @@ module.exports = {
   wantsOrg: false,
   args: [],
   flags: [
-    {
-      name: 'pipeline',
-      char: 'p',
-      description: 'name of pipeline',
-      hasValue: true,
-      required: true
-    },
+    flags.pipeline({ name: 'pipeline', required: true, hasValue: true }),
     {
       name: 'app',
       char: 'a',
@@ -35,19 +30,16 @@ module.exports = {
     },
     {
       name: 'autodeploy',
-      char: 'p',
       description: 'autodeploy the review app',
       hasValue: false
     },
     {
       name: 'autodestroy',
-      char: 'u',
       description: 'autodestroy the review app',
       hasValue: false
     }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
-
     const kolkrabbi = new KolkrabbiAPI(context.version, heroku.options.token)
 
     const settings = {
@@ -57,11 +49,11 @@ module.exports = {
     }
 
     if (context.flags.autodeploy) {
-      cli.log('Enabling auto deployment ...');
+      cli.log('Enabling auto deployment...');
       settings.pull_requests.auto_deploy = true;
     }
     if (context.flags.autodestroy) {
-      cli.log('Enabling auto destroy ...');
+      cli.log('Enabling auto destroy...');
       settings.pull_requests.auto_destroy = true;
     }
 
