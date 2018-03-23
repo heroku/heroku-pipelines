@@ -28,12 +28,12 @@ module.exports = {
     },
     {
       name: 'autodeploy',
-      description: 'autodeploy the review app',
+      description: 'disable autodeployments',
       hasValue: false
     },
     {
       name: 'autodestroy',
-      description: 'autodestroy the review app',
+      description: 'disable automatically destroying review apps',
       hasValue: false
     }
   ],
