@@ -20,10 +20,10 @@ module.exports = {
   needsAuth: true,
   wantsOrg: false,
   args: [{
-      name: 'name',
-      description: 'name of pipeline',
-      optional: true
-    }
+    name: 'name',
+    description: 'name of pipeline',
+    optional: true
+  }
   ],
   flags: [
     {
@@ -35,7 +35,6 @@ module.exports = {
     }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
-
     const args = { name: context.args.name, repo: context.flags.repo }
     const errors = Validate.nameAndRepo(args)
 

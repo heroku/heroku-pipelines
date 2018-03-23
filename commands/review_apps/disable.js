@@ -38,26 +38,26 @@ module.exports = {
     }
   ],
   run: cli.command(co.wrap(function* (context, heroku) {
-    let disable = false;
+    let disable = false
 
     // if no flags are passed then the user is disabling review apps
-    if (!context.flags.autodeploy && !context.flags.autodestroy)  {
-      disable = true;
+    if (!context.flags.autodeploy && !context.flags.autodestroy) {
+      disable = true
     }
 
     const kolkrabbi = new KolkrabbiAPI(context.version, heroku.options.token)
 
     const settings = {
       pull_requests: {
-        enabled: !disable,
+        enabled: !disable
       }
     }
 
     if (context.flags.autodeploy) {
-      settings.pull_requests.auto_deploy = false;
+      settings.pull_requests.auto_deploy = false
     }
     if (context.flags.autodestroy) {
-      settings.pull_requests.auto_destroy = false;
+      settings.pull_requests.auto_destroy = false
     }
 
     let app = yield api.getApp(heroku, context.flags.app)

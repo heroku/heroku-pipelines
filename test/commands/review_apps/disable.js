@@ -4,14 +4,8 @@ const expect = require('chai').expect
 const cmd = require('../../../commands/review_apps/disable')
 
 describe('reviewapps:disable', function () {
-  let pipeline, repo, app, kolkrabbiAccount
-  let api, kolkrabbi, github
-
-  function nockDone() {
-    api.done()
-    github.done()
-    kolkrabbi.done()
-  }
+  let pipeline, app, kolkrabbiAccount
+  let api, kolkrabbi
 
   beforeEach(function () {
     cli.mockConsole()
@@ -28,12 +22,6 @@ describe('reviewapps:disable', function () {
       name: 'my-pipeline'
     }
 
-    repo = {
-      id: 123,
-      default_branch: 'master',
-      name: 'my-org/my-repo'
-    }
-
     app = {
       id: '123-prod-app',
       name: pipeline.name
@@ -42,8 +30,6 @@ describe('reviewapps:disable', function () {
     kolkrabbi = nock('https://kolkrabbi.heroku.com')
     kolkrabbi.get('/account/github/token').reply(200, kolkrabbiAccount)
     kolkrabbi.patch(`/apps/${app.id}/github`).reply(200, {})
-
-    github = nock('https://api.github.com')
 
     api = nock('https://api.heroku.com')
     api.get(`/apps/${app.name}`).reply(200, app)

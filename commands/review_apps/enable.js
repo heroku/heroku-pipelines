@@ -49,12 +49,12 @@ module.exports = {
     }
 
     if (context.flags.autodeploy) {
-      cli.log('Enabling auto deployment...');
-      settings.pull_requests.auto_deploy = true;
+      cli.log('Enabling auto deployment...')
+      settings.pull_requests.auto_deploy = true
     }
     if (context.flags.autodestroy) {
-      cli.log('Enabling auto destroy...');
-      settings.pull_requests.auto_destroy = true;
+      cli.log('Enabling auto destroy...')
+      settings.pull_requests.auto_destroy = true
     }
 
     let app = yield api.getApp(heroku, context.flags.app)

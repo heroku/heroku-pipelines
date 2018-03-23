@@ -10,9 +10,9 @@ describe('pipelines:connect', function () {
   })
 
   afterEach(function () {
-    if(!nock.isDone()) {
-      this.test.error(new Error('Not all nock interceptors were used!'));
-      nock.cleanAll();
+    if (!nock.isDone()) {
+      this.test.error(new Error('Not all nock interceptors were used!'))
+      nock.cleanAll()
     }
   })
 
@@ -29,12 +29,6 @@ describe('pipelines:connect', function () {
 
   context('with an account connected to GitHub', function () {
     let pipeline, repo, kolkrabbiAccount, api, kolkrabbi, github
-
-    function nockDone() {
-      api.done()
-      github.done()
-      kolkrabbi.done()
-    }
 
     beforeEach(function () {
       kolkrabbiAccount = {
