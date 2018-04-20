@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+- Added command `ci:enable` and `ci:disable` for existing pipelines.
+
 ## [2.5.4] 2018-04-18
 
 - Switch to http-call from got
