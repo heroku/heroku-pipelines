@@ -2,7 +2,8 @@ var flatten = require('lodash.flatten')
 
 exports.topic = [
   { name: 'pipelines', description: 'manage collections of apps in pipelines' },
-  { name: 'reviewapps', description: 'manage reviewapps in pipelines' }
+  { name: 'reviewapps', description: 'manage reviewapps in pipelines' },
+  { name: 'ci', description: 'run an application test suite on Heroku' }
 ]
 
 exports.commands = flatten([
@@ -20,5 +21,7 @@ exports.commands = flatten([
   require('./commands/pipelines/setup.js'),
   require('./commands/pipelines/transfer.js'),
   require('./commands/review_apps/disable.js'),
-  require('./commands/review_apps/enable.js')
+  require('./commands/review_apps/enable.js'),
+  require('./commands/ci/enable.js'),
+  require('./commands/ci/disable.js')
 ])
