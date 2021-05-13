@@ -1,11 +1,12 @@
 # Pipelines Plugin for Heroku Toolbelt
 
+**Package has moved to:** https://github.com/heroku/cli/tree/master/packages/pipelines
+
 [![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
 [![npm
 version](https://img.shields.io/npm/v/heroku-pipelines.svg)](https://www.npmjs.com/package/heroku-pipelines)
 [![build status](https://img.shields.io/circleci/project/heroku/heroku-pipelines.svg)](https://circleci.com/gh/heroku/heroku-pipelines)
-[![codecov](https://codecov.io/gh/heroku/heroku-pipelines/branch/master/graph/badge.svg)](https://codecov.io/gh/heroku/heroku-pipelines)
 
 A Heroku CLI plugin for [continuous delivery](https://www.heroku.com/continuous-delivery) on Heroku.
 
